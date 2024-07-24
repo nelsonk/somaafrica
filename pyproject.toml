@@ -5,7 +5,7 @@ description = "A highly coveted schools park bridging schools, parents, students
 authors = ["Nelson Kanyali <nelskon@gmail.com>"]
 readme = "README.md"
 package-mode = true
-repository = "https://github.com/nelsonk/dialer"
+repository = "https://github.com/nelsonk/somaafrica"
 
 [tool.poetry.dependencies]
 python = ">=3.10"
