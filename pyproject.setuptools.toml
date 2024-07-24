@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "somaafrica"
+version = "0.1.0"
+authors = [
+    {name = "Nelson Kanyali", email = "nelskon@gmail.com"},
+]
+description = "A highly coveted schools park bridging schools, parents, students and staff."
+readme = "README.md"
+requires-python = ">=3.7"
+keywords = ["asterisk", "autodialer", "AMI", "call center", "voip"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "peewee",
+    "pymysql",
+]
+
+[project.urls]
+Repository = "https://github.com/nelsonk/dialer"
+
+[project.scripts]
+upload_to_dialer = 'dialer.scripts.upload:main'
+run_dialer = 'dialer.scripts.calllogic:main'
+dialer_setup = 'dialer.scripts.post_install:main'

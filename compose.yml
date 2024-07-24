@@ -1,0 +1,50 @@
+name: phptest
+
+services:
+  nginx:
+    build: 
+      context: ./nginx
+      dockerfile: ./Dockerfile
+    volumes:
+     - ./php/files:/var/www/html
+    ports:
+     - "7777:8088"
+    expose:
+      - 7777
+    depends_on:
+      - php
+    restart: on-failure
+    environment:
+     NGINX_HOST: phptest.com
+     NGINX_PORT: 8088
+
+  php:
+    build:
+      context: ./php
+      dockerfile: ./Dockerfile
+    depends_on:
+      - mariadb
+    expose:
+      - 9000
+    restart: on-failure
+    volumes:
+      - ./php/files:/var/www/html
+
+  mariadb:
+    build: 
+      context: ./db
+      dockerfile: ./Dockerfile
+    expose:
+      - 3306
+    restart: on-failure
+    environment:
+      MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 1
+    volumes:
+      - data:/var/lib/mysql
+
+  python:
+  
+
+volumes:
+  data:
+    external: true
