@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "somaafrica"
+version = "0.1.0"
+description = "A highly coveted schools park bridging schools, parents, students and staff"
+authors = ["Nelson Kanyali <nelskon@gmail.com>"]
+readme = "README.md"
+package-mode = true
+repository = "https://github.com/nelsonk/somaafrica"
+
+[tool.poetry.dependencies]
+django = ">=4.2"
+
+[tool.poetry.scripts]
+upload_to_dialer = 'dialer.scripts.upload:main'
+run_dialer = 'dialer.scripts.calllogic:main'
+dialer_setup = 'dialer.scripts.post_install:main'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

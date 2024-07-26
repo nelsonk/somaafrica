@@ -1,0 +1,4 @@
+-r base.txt
+pytest>=6
+black
+flake8

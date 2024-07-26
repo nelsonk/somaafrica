@@ -47,7 +47,7 @@ class Logger:
         Format logs like this
         """
         return logging.Formatter(
-            "[%(asctime)s] %(levelname)s {%(pathname)s:%(lineno)d} - %(message)s"
+            "[%(asctime)s] %(levelname)s {%(pathname)s:%(lineno)d} - %(message)s"  # noqa
         )
 
 
