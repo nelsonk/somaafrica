@@ -49,7 +49,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "somaafrica.urls"
+ROOT_URLCONF = "somaafrica.configs.urls"
 
 TEMPLATES = [
     {
@@ -75,8 +75,12 @@ WSGI_APPLICATION = "somaafrica.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "somaafrica",
+        "USER": "somaafrica",
+        "PASSWORD": "soma@00test00",
+        "HOST": "127.0.0.1",
+        "PORT": "5432",
     }
 }
 

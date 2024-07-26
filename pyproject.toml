@@ -1,22 +1,33 @@
-[tool.poetry]
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
 name = "somaafrica"
 version = "0.1.0"
-description = "A highly coveted schools park bridging schools, parents, students and staff"
-authors = ["Nelson Kanyali <nelskon@gmail.com>"]
+authors = [
+    {name = "Nelson Kanyali", email = "nelskon@gmail.com"},
+]
+description = "A highly coveted schools park bridging schools, parents, students and staff."
 readme = "README.md"
-package-mode = true
-repository = "https://github.com/nelsonk/somaafrica"
+requires-python = ">=3.9"
+keywords = ["school management system", "student admissions", "parents", "education", "E-Learning"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "django",
+    "psycopg",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.10"
-django = "^5.0.7"
-tox = "^4.16.0"
+[project.urls]
+Repository = "https://github.com/nelsonk/somaafrica"
 
-[tool.poetry.scripts]
+[project.scripts]
 upload_to_dialer = 'dialer.scripts.upload:main'
 run_dialer = 'dialer.scripts.calllogic:main'
 dialer_setup = 'dialer.scripts.post_install:main'
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
