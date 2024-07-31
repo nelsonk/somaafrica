@@ -37,6 +37,18 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # for allauth
+    "allauth",
+    "allauth.account",
+    # Optional -- requires install using `django-allauth[socialaccount]`.
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.facebook",
+    "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.instagram",
+    "allauth.socialaccount.providers.telegram",
+    "allauth.socialaccount.providers.twitter",
+    "allauth.socialaccount.providers.tiktok",
+    "somaafrica",
 ]
 
 MIDDLEWARE = [
@@ -47,6 +59,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # for allauth
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "somaafrica.configs.urls"
@@ -111,6 +125,8 @@ LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = "UTC"
 
+SITE_ID = 1
+
 USE_I18N = True
 
 USE_TZ = True
@@ -125,3 +141,54 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+AUTHENTICATION_BACKENDS = [
+    # Needed to login by username in Django admin, regardless of `allauth`
+    #'django.contrib.auth.backends.ModelBackend',
+    "somaafrica.configs.authentication.SomaAfricaBackend",
+    # `allauth` specific authentication methods, such as login by email
+    #'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+SOCIALACCOUNT_PROVIDERS = {
+    "facebook": {
+        "METHOD": "js_sdk",
+        "SDK_URL": "https://connect.facebook.net/en_GB/sdk.js",
+        "APP": {"client_id": "1303916186392315", "secret": "#xfbml=1", "key": ""},
+    },
+    "google": {
+        "APP": {
+            "client_id": "867753896036-8qnev67v1k86us82eed917hkv0eg2sf8.apps.googleusercontent.com",
+            "secret": "your-google-client-secret",
+            "key": "",
+        }
+    },
+    "twitter": {
+        "APP": {
+            "client_id": "your-twitter-app-id",
+            "secret": "your-twitter-app-secret",
+            "key": "",
+        }
+    },
+    "instagram": {
+        "APP": {
+            "client_id": "your-instagram-app-id",
+            "secret": "your-instagram-app-secret",
+            "key": "",
+        }
+    },
+    "telegram": {
+        "APP": {
+            "client_id": "your-telegram-app-id",
+            "secret": "your-telegram-app-secret",
+            "key": "",
+        }
+    },
+    "tiktok": {
+        "APP": {
+            "client_id": "your-tiktok-app-id",
+            "secret": "your-tiktok-app-secret",
+            "key": "",
+        }
+    },
+}

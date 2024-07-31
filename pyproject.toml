@@ -22,12 +22,13 @@ classifiers = [
 dependencies = [
     "django",
     "psycopg",
+    "django-allauth",
 ]
 
 [project.urls]
 Repository = "https://github.com/nelsonk/somaafrica"
 
 [project.scripts]
-upload_to_dialer = 'dialer.scripts.upload:main'
-run_dialer = 'dialer.scripts.calllogic:main'
-dialer_setup = 'dialer.scripts.post_install:main'
+#upload_to_dialer = 'dialer.scripts.upload:main'
+#run_dialer = 'dialer.scripts.calllogic:main'
+#dialer_setup = 'dialer.scripts.post_install:main'

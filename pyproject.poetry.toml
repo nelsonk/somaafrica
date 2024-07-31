@@ -9,11 +9,12 @@ repository = "https://github.com/nelsonk/somaafrica"
 
 [tool.poetry.dependencies]
 django = ">=4.2"
+django-allauth = "*"
 
 [tool.poetry.scripts]
-upload_to_dialer = 'dialer.scripts.upload:main'
-run_dialer = 'dialer.scripts.calllogic:main'
-dialer_setup = 'dialer.scripts.post_install:main'
+#upload_to_dialer = 'dialer.scripts.upload:main'
+#run_dialer = 'dialer.scripts.calllogic:main'
+#dialer_setup = 'dialer.scripts.post_install:main'
 
 [build-system]
 requires = ["poetry-core"]

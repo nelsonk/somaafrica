@@ -1,0 +1,5 @@
+[flake8]
+env_name = py312
+extend-ignore = 
+exclude = .git,__pycache__,.venv,old,build,dist,.tox, settings.py
+max-complexity = 10
