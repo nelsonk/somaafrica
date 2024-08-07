@@ -1,7 +1,13 @@
-import re
-
 from django.contrib.auth.backends import BaseBackend
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+from django.db.models import Q
+
+
+User = get_user_model()
+
+
+class AuthenticationError(Exception):
+    pass
 
 
 class SomaAfricaBackend(BaseBackend):
@@ -12,24 +18,18 @@ class SomaAfricaBackend(BaseBackend):
         if not username or not password:
             return None
 
-        if self.is_email(username):
-            user_field = {"email": username}
-        else:
-            user_field = {"username": username}
-
         try:
-            user = User.objects.get(**user_field)
-            if user.check_password(password):
+            user = User.objects.get(Q(username=username) | Q(email=username))
+            password_mathches = user.check_password(password)
+
+            if password_mathches:
                 return user
+            raise AuthenticationError("Invalid password")
         except User.DoesNotExist:
-            return None
+            raise
 
     def get_user(self, user_id):
         try:
             return User.objects.get(pk=user_id)
         except User.DoesNotExist:
             return None
-
-    def is_email(self, input_string):
-        pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-        return re.match(pattern, input_string) is not None

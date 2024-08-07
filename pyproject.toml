@@ -22,7 +22,10 @@ classifiers = [
 dependencies = [
     "django",
     "psycopg",
-    "django-allauth",
+    "djangorestframework",
+    "markdown",
+    "django-filter",
+    "phonenumbers"
 ]
 
 [project.urls]

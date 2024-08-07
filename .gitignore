@@ -1,4 +1,5 @@
 database.ini
+migrations/
 
 # Editors
 .vscode/
