@@ -10,6 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import logging
+
+import logging.config
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -37,18 +40,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # for allauth
-    "allauth",
-    "allauth.account",
-    # Optional -- requires install using `django-allauth[socialaccount]`.
-    "allauth.socialaccount",
-    "allauth.socialaccount.providers.facebook",
-    "allauth.socialaccount.providers.google",
-    "allauth.socialaccount.providers.instagram",
-    "allauth.socialaccount.providers.telegram",
-    "allauth.socialaccount.providers.twitter",
-    "allauth.socialaccount.providers.tiktok",
-    "somaafrica",
+    "rest_framework",
+    "django_filters",
+    "somaafrica.commons",
+    "somaafrica.persons",
 ]
 
 MIDDLEWARE = [
@@ -59,8 +54,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    # for allauth
-    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "somaafrica.configs.urls"
@@ -142,53 +135,47 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+AUTH_USER_MODEL = "commons.User"
+
 AUTHENTICATION_BACKENDS = [
     # Needed to login by username in Django admin, regardless of `allauth`
     #'django.contrib.auth.backends.ModelBackend',
-    "somaafrica.configs.authentication.SomaAfricaBackend",
-    # `allauth` specific authentication methods, such as login by email
-    #'allauth.account.auth_backends.AuthenticationBackend',
+    "somaafrica.commons.authentication_backends.SomaAfricaBackend",
 ]
 
-SOCIALACCOUNT_PROVIDERS = {
-    "facebook": {
-        "METHOD": "js_sdk",
-        "SDK_URL": "https://connect.facebook.net/en_GB/sdk.js",
-        "APP": {"client_id": "1303916186392315", "secret": "#xfbml=1", "key": ""},
-    },
-    "google": {
-        "APP": {
-            "client_id": "867753896036-8qnev67v1k86us82eed917hkv0eg2sf8.apps.googleusercontent.com",
-            "secret": "your-google-client-secret",
-            "key": "",
+LOGGING_CONFIG = None
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": True,
+    "formatters": {
+        "verbose": {
+            "format": "[SOMAAFRICA] %(levelname)s %(asctime)s %(name)s:%(lineno)s %(message)s",  # noqa
         }
     },
-    "twitter": {
-        "APP": {
-            "client_id": "your-twitter-app-id",
-            "secret": "your-twitter-app-secret",
-            "key": "",
+    "filters": {"require_debug_false": {"()": "django.utils.log.RequireDebugFalse"}},
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
         }
     },
-    "instagram": {
-        "APP": {
-            "client_id": "your-instagram-app-id",
-            "secret": "your-instagram-app-secret",
-            "key": "",
-        }
-    },
-    "telegram": {
-        "APP": {
-            "client_id": "your-telegram-app-id",
-            "secret": "your-telegram-app-secret",
-            "key": "",
-        }
-    },
-    "tiktok": {
-        "APP": {
-            "client_id": "your-tiktok-app-id",
-            "secret": "your-tiktok-app-secret",
-            "key": "",
-        }
-    },
+}
+logging.config.dictConfig(LOGGING)
+
+
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination'
 }
