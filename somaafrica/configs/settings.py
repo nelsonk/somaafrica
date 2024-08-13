@@ -146,7 +146,7 @@ AUTHENTICATION_BACKENDS = [
     'somaafrica.commons.authentication_backends.SomaAfricaBackend',
 ]
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '545049079120-7rcvrh6as0be2j4oa3n1t70lns143qki.apps.googleusercontent.com'
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = ''
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = ''
 
 SOCIAL_AUTH_FACEBOOK_KEY = '<your-facebook-app-id>'
