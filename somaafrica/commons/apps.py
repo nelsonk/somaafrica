@@ -1,6 +1,6 @@
-from django.apps import AppConfig
+# from django.apps import AppConfig
 
 
-class CommonsConfig(AppConfig):
-    default_auto_field = "django.db.models.BigAutoField"
-    name = "somaafrica.commons"
+# class CommonsConfig(AppConfig):
+#     default_auto_field = "django.db.models.BigAutoField"
+#     name = "somaafrica.commons"

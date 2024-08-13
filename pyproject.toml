@@ -21,11 +21,14 @@ classifiers = [
 ]
 dependencies = [
     "django",
+    "ipython",
     "psycopg",
     "djangorestframework",
     "markdown",
     "django-filter",
-    "phonenumbers"
+    "phonenumbers",
+    "djangorestframework-simplejwt[crypto]",
+    "social-auth-core"
 ]
 
 [project.urls]
