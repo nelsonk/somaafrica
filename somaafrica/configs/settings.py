@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
-
+from datetime import timedelta
 import logging
 
 import logging.config
@@ -28,7 +28,7 @@ SECRET_KEY = "django-insecure-@eamfzy6l^#^a3e@*iuj#qr^pl9zp7sgtfi!51yl$nhv_x&fdp
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "django_filters",
+    'rest_framework_simplejwt.token_blacklist',
     "somaafrica.commons",
     "somaafrica.persons",
 ]
@@ -135,13 +136,48 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-AUTH_USER_MODEL = "commons.User"
+AUTH_USER_MODEL = "persons.User"
 
 AUTHENTICATION_BACKENDS = [
     # Needed to login by username in Django admin, regardless of `allauth`
     #'django.contrib.auth.backends.ModelBackend',
-    "somaafrica.commons.authentication_backends.SomaAfricaBackend",
+    'social_core.backends.google.GoogleOAuth2',
+    'social_core.backends.facebook.FacebookOAuth2',
+    'somaafrica.commons.authentication_backends.SomaAfricaBackend',
 ]
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '545049079120-7rcvrh6as0be2j4oa3n1t70lns143qki.apps.googleusercontent.com'
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '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'
+
+SOCIAL_AUTH_FACEBOOK_KEY = '<your-facebook-app-id>'
+SOCIAL_AUTH_FACEBOOK_SECRET = '<your-facebook-app-secret>'
+
+# URL configuration for social auth
+SOCIAL_AUTH_URL_NAMESPACE = 'social'
+
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissions'
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ]
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+
+    "ALGORITHM": "HS256",
+
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION"
+}
 
 LOGGING_CONFIG = None
 LOGGING = {
@@ -169,13 +205,3 @@ LOGGING = {
     },
 }
 logging.config.dictConfig(LOGGING)
-
-
-REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
-    ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination'
-}

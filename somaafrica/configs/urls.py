@@ -17,10 +17,23 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenBlacklistView
+)
+
+from somaafrica.persons.views import SignupAPIView, LoginAPIView, SocialLoginAPIView, LogoutJWTAPIView
 
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("signup", SignupAPIView.as_view(), name="signup"),
+    path("login", LoginAPIView.as_view(), name="login"),
+    path("social/<str:backend>/", SocialLoginAPIView.as_view(), name="social-login"),
+    path("token", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("token/refresh", TokenRefreshView.as_view(), name="token_refresh"),
+    path('token/blacklist', TokenBlacklistView.as_view(), name='token_blacklist'),
+    path("logout", LogoutJWTAPIView.as_view(), name="logout-token"),
     path("persons/", include("somaafrica.persons.urls")),
-    path("commons/", include("somaafrica.commons.urls")),
 ]
