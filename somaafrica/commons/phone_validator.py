@@ -2,7 +2,7 @@ import phonenumbers
 from django.core.exceptions import ValidationError
 
 
-def validate_international_phone_number(value):
+def validate_phone_number(value):
     try:
         # Parse the phone number with an optional region
         phone_number = phonenumbers.parse(value, None)

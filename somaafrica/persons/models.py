@@ -5,7 +5,7 @@ from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin, Group
 from django.db import models
 
-from somaafrica.commons.phone_validator import validate_international_phone_number
+from somaafrica.commons.phone_validator import validate_phone_number
 
 
 gender_choices = [("M", "Male"), ("F", "Female")]
@@ -54,7 +54,12 @@ class CustomUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, username, email=None, password=None, **extras):
+    def create_superuser(
+            self,
+            username=None,
+            email=None,
+            password=None,
+            **extras):
         extras.setdefault('is_staff', True)
         extras.setdefault('is_superuser', True)
 
@@ -91,7 +96,7 @@ class Phone(UserTimeStampModel):
     """
     number = models.CharField(
         max_length=20,
-        validators=[validate_international_phone_number]
+        validators=[validate_phone_number]
     )
 
 
