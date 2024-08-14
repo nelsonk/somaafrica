@@ -166,7 +166,9 @@ class UserViewSet(ReadOnlyModelViewSet):
     filterset_fields = {
         'username': ['exact'],
         'email': ['exact'],
-        "id": ['exact']
+        "id": ['exact'],
+        'is_active': ['exact'],
+        'is_superuser': ['exact']
     }
     search_fields = ['username', 'email', 'id', 'created_at', 'updated_at']
     ordering_fields = ['username', 'email', 'id', 'created_at', 'updated_at']
