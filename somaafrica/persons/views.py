@@ -1,4 +1,5 @@
 import logging
+# import pdb
 
 from django.contrib.auth import authenticate, login
 from django.db.models import Q
@@ -44,7 +45,7 @@ class SignupAPIView(APIView):
 
             return Response(
                 {
-                    "message": "User created successfully",
+                    "message": "User created Successfully",
                     "user": user_serializer.data
                 },
                 status=status.HTTP_200_OK
@@ -65,6 +66,7 @@ class LoginAPIView(APIView):
         login_serializer.is_valid(raise_exception=True)
 
         try:
+            # pdb.set_trace
             user = authenticate(request, **login_serializer._validated_data)
             login(request, user)
 
@@ -75,13 +77,14 @@ class LoginAPIView(APIView):
 
         except Exception as e:
             return Response(
-                {"message": "Authentication failed", "detail": str(e)}
+                {"message": "Authentication failed", "detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
 
 class SocialLoginAPIView(APIView):
     permission_classes = [AllowAny]
-    
+
     def post(self, request, backend):
         try:
             # Get the backend (e.g., Google, Facebook)
@@ -141,12 +144,15 @@ class LogoutJWTAPIView(APIView):
 
             return Response(
                 {"detail": "Token blacklisted, Successfully logged out."},
-                status=204
+                status=status.HTTP_200_OK
             )
 
         except Exception as e:
             # Handle any errors (e.g., invalid token)
-            return Response({"detail": str(e)}, status=400)
+            return Response(
+                {"detail": f"Failed, {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class UserViewSet(ReadOnlyModelViewSet):

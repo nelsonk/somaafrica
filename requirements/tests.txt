@@ -1,4 +1,4 @@
 -r base.txt
 pytest>=6
-black
+pytest-django
 flake8
