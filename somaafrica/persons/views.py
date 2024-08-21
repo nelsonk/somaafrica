@@ -2,6 +2,7 @@ import logging
 # import pdb
 
 from django.contrib.auth import authenticate, login
+from django.contrib.auth.models import Group, Permission
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
@@ -22,7 +23,9 @@ from .models import User
 from .serializers import (
     UserSerializer,
     UserSignupSerializer,
-    UserLoginSerializer
+    UserLoginSerializer,
+    GroupSerializer,
+    PermissionSerializer
 )
 
 
@@ -246,3 +249,101 @@ class UserViewSet(ReadOnlyModelViewSet):
         # Fallback if pagination is not required
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+
+class PermissionViewSet(ReadOnlyModelViewSet):
+    queryset = Permission.objects.all()
+    serializer_class = PermissionSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter
+    ]
+    filterset_fields = {
+        'codename': ['exact'],
+        'content_type__id': ['exact'],
+        'group__name': ['exact'],
+        'id': ['exact'],
+        'name': ['exact'],
+        'user__id': ['exact']
+    }
+    search_fields = [
+        'codename',
+        'content_type__id',
+        'group__name',
+        'id',
+        'name',
+        'user__id'
+    ]
+    ordering_fields = [
+        'codename',
+        'content_type__id',
+        'group__name',
+        'id',
+        'name',
+        'user__id'
+    ]
+    ordering = 'content_type'
+
+
+class GroupViewSet(ReadOnlyModelViewSet):
+    queryset = Group.objects.all()
+    serializer_class = GroupSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter
+    ]
+    filterset_fields = {
+        'id': ['exact'],
+        'name': ['exact'],
+        'permissions__codename': ['exact'],
+        'user__id': ['exact']
+    }
+    search_fields = ['id', 'name', 'permissions__codename', 'user__id']
+    ordering_fields = ['id', 'name', 'permissions__codename', 'user__id']
+    ordering = 'name'
+
+    def create(self, request):
+        user = request.user
+        if user.is_staff or user.has_perm('add_group'):
+            group = request.data.get("group")
+            perms = request.data.get("permissions")
+
+            if not group:
+                details = "group not provided"
+                return Response(
+                    data={"message": "Unsuccessful", "detail": details},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                our_group, _ = Group.objects.get_or_create(name=group)
+
+                if perms:
+                    permissions = Permission.objects.filter(
+                        codename__in=perms
+                    )
+                    our_group.permissions.add(*permissions)
+
+                data = self.get_serializer(our_group).data
+
+                return Response(
+                    data={"message": "Successful", "detail": data},
+                    status=status.HTTP_200_OK
+                )
+
+            except Exception as e:
+                return Response(
+                    data={"message": "Unsuccessful", "detail": str(e)},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        else:
+            details = "You don't have the necessary permissions"
+            return Response(
+                data={"message": "Unsuccessful", "detail": details},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
