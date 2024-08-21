@@ -2,7 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
-from django.contrib.auth.models import PermissionsMixin, Group
+from django.contrib.auth.models import PermissionsMixin
 from django.db import models
 
 from somaafrica.commons.phone_validator import validate_phone_number
@@ -86,6 +86,13 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampModel):
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = []
 
+    class Meta:
+        permissions = [
+            ("modify_other_user", "Can modify other user"),
+            ("delete_other_user", "Can delete other User"),
+            ("delete_own_user", "Can delete own user recrord")
+        ]
+
     def __str__(self):
         return f"{self.id} - {self.username} - {self.email}"
 
@@ -121,7 +128,6 @@ class Person(UserTimeStampModel):
         on_delete=models.CASCADE,
         related_name="person"
     )
-    groups = models.ManyToManyField(Group, related_name="person")
     first_name = models.CharField(max_length=30, null=True)
     last_name = models.CharField(max_length=30, null=True)
     gender = models.CharField(choices=gender_choices, null=True, max_length=1)
@@ -129,3 +135,10 @@ class Person(UserTimeStampModel):
     phone = models.ManyToManyField(Phone, related_name="person")
     address = models.ManyToManyField(Address, related_name="person")
     account_status = models.CharField(choices=status_choices, max_length=10)
+
+    class Meta:
+        permissions = [
+            ("modify_other_person", "Can modify other person"),
+            ("delete_other_person", "Can delete other person"),
+            ("delete_own_person", "Can delete own person record")
+        ]
