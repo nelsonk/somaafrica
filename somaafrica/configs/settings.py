@@ -180,23 +180,41 @@ LOGGING = {
     "disable_existing_loggers": True,
     "formatters": {
         "verbose": {
-            "format": "[SOMAAFRICA] %(levelname)s %(asctime)s %(name)s:%(lineno)s %(message)s",  # noqa
+            "format": "[SOMAAFRICA] %(levelname)s %(asctime)s %(name)s-%(filename)s@%(funcName)s:%(lineno)s %(message)s",  # noqa
         }
     },
     "filters": {"require_debug_false": {"()": "django.utils.log.RequireDebugFalse"}},
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "level": "DEBUG",
+            "level": "INFO",
+            "formatter": "verbose",
+        },
+        "debug": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "maxBytes": 500 * 1024 * 1024,  # 5 MB
+            "backupCount": 3,
+            "filename": "./debug.log",
+            "level": "INFO",
+            "formatter": "verbose",
+            "filters": ["require_debug_false"]
+        },
+        "warn": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": "./error.log",
+            "when": "midnight",  # Rotate at midnight
+            "interval": 2,  # Every 2 days
+            "backupCount": 7,
+            "level": "WARNING",
             "formatter": "verbose",
         },
     },
     "loggers": {
         "": {
-            "handlers": ["console"],
+            "handlers": ["console", "debug", "warn"],
             "level": "INFO",
-            "propagate": False,
-        }
+            "propagate": False
+        },
     },
 }
 logging.config.dictConfig(LOGGING)

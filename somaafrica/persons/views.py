@@ -191,13 +191,13 @@ class UserViewSet(ReadOnlyModelViewSet):
         if not password1 or not password2:
             return Response(
                 {"message": "Password null"},
-                status=status.HTTP_204_NO_CONTENT
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         if password1 != password2:
             return Response(
                 {"message": "Password mismatch"},
-                status=status.HTTP_406_NOT_ACCEPTABLE
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
@@ -208,11 +208,14 @@ class UserViewSet(ReadOnlyModelViewSet):
 
             return Response(
                 {"message": "User updated successfully", "detail": detail},
-                status=status.HTTP_202_ACCEPTED
+                status=status.HTTP_200_OK
             )
 
         except Exception as e:
-            return Response({"message": "Unsuccessful", "detail": str(e)})
+            return Response(
+                {"message": "Unsuccessful", "detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     @action(methods=['delete'], detail=True)
     def delete(self, request, pk=None):
@@ -223,7 +226,10 @@ class UserViewSet(ReadOnlyModelViewSet):
             )
 
         except Exception as e:
-            return Response({"message": "Unsuccessful", "detail": str(e)})
+            return Response(
+                {"message": "Unsuccessful", "detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     @action(methods=['get'], detail=False)
     def list_active_users(self, request):
