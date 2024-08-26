@@ -2,7 +2,7 @@ import logging
 # import pdb
 
 from django.contrib.auth import authenticate, login
-from django.contrib.auth.models import Group, Permission
+from django.contrib.auth.models import Permission
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
@@ -19,7 +19,7 @@ from social_core.backends.facebook import FacebookOAuth2
 from social_core.exceptions import AuthException
 from social_core.actions import do_complete
 
-from .models import User
+from .models import User, Group
 from .serializers import (
     UserSerializer,
     UserSignupSerializer,
@@ -55,6 +55,7 @@ class SignupAPIView(APIView):
             )
 
         except Exception as e:
+            LOGGER.warning(str(e))
             return Response(
                 {"message": str(e)},
                 status=status.HTTP_406_NOT_ACCEPTABLE
@@ -79,6 +80,7 @@ class LoginAPIView(APIView):
             )
 
         except Exception as e:
+            LOGGER.warning(str(e))
             return Response(
                 {"message": "Authentication failed", "detail": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
@@ -96,6 +98,7 @@ class SocialLoginAPIView(APIView):
             elif backend == 'facebook':
                 backend_class = FacebookOAuth2()
             else:
+                LOGGER.warning("Unsupported backend")
                 return Response(
                     {'error': 'Unsupported backend'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -127,6 +130,7 @@ class SocialLoginAPIView(APIView):
             })
 
         except AuthException as e:
+            LOGGER.warning(str(e))
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
@@ -151,6 +155,7 @@ class LogoutJWTAPIView(APIView):
             )
 
         except Exception as e:
+            LOGGER.warning(str(e))
             # Handle any errors (e.g., invalid token)
             return Response(
                 {"detail": f"Failed, {str(e)}"},
@@ -179,12 +184,41 @@ class UserViewSet(ReadOnlyModelViewSet):
 
     def get_queryset(self):
         user_id = self.request.user.id
-        admin_user = self.request.user.is_staff
+        admin_user = self.request.user.is_superuser
 
-        if admin_user:
+        if admin_user or self.request.user.has_perm("add_user"):
             return User.objects.all()
 
         return User.objects.filter(id=user_id)
+
+    def update(self, request, pk=None):
+        user = request.user
+
+        try:
+            data = {
+                "username": request.data.get("username", None),
+                "email": request.data.get("email", None),
+                "is_active": request.data.get("is_active", None)
+            }
+
+            if user.is_superuser:
+                data["is_staff"] = request.data.get("is_staff", None)
+                data["is_superuser"] = request.data.get("is_superuser", None)
+
+            count = self.get_queryset().filter(pk=pk).update(**data)
+
+            detail = f"{count} records updated"
+            return Response(
+                data={"message": "Successful", "detail": detail},
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            LOGGER.warning(str(e))
+            return Response(
+                data={"message": "Unsuccessful", "detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     @action(methods=['put'], detail=True)
     def change_password(self, request, pk=None):
@@ -192,12 +226,14 @@ class UserViewSet(ReadOnlyModelViewSet):
         password2 = request.data.get("password2")
 
         if not password1 or not password2:
+            LOGGER.warning("Password numm")
             return Response(
                 {"message": "Password null"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         if password1 != password2:
+            LOGGER.warning("Password mismatch")
             return Response(
                 {"message": "Password mismatch"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -215,6 +251,7 @@ class UserViewSet(ReadOnlyModelViewSet):
             )
 
         except Exception as e:
+            LOGGER.warning(str(e))
             return Response(
                 {"message": "Unsuccessful", "detail": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
@@ -229,6 +266,7 @@ class UserViewSet(ReadOnlyModelViewSet):
             )
 
         except Exception as e:
+            LOGGER.warning(str(e))
             return Response(
                 {"message": "Unsuccessful", "detail": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
@@ -306,27 +344,40 @@ class GroupViewSet(ReadOnlyModelViewSet):
     ordering_fields = ['id', 'name', 'permissions__codename', 'user__id']
     ordering = 'name'
 
+    def _handle_group_permissions(self, group, perms):
+        try:
+            permissions = Permission.objects.filter(codename__in=perms)
+            group.permissions.clear()
+            group.permissions.add(*permissions)
+            group.save()
+        except Exception as e:
+            raise e
+
     def create(self, request):
         user = request.user
-        if user.is_staff or user.has_perm('add_group'):
+
+        if user.is_superuser or user.has_perm('add_group'):
             group = request.data.get("group")
             perms = request.data.get("permissions")
 
             if not group:
-                details = "group not provided"
+                detail = "group not provided"
+                LOGGER.info(detail)
                 return Response(
-                    data={"message": "Unsuccessful", "detail": details},
+                    data={"message": "Unsuccessful", "detail": detail},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
             try:
-                our_group, _ = Group.objects.get_or_create(name=group)
+                defaults = {
+                    "name": group,
+                    "created_by": user.id,
+                    "updated_by": user.id
+                }
+                our_group = Group.objects.create(**defaults)
 
                 if perms:
-                    permissions = Permission.objects.filter(
-                        codename__in=perms
-                    )
-                    our_group.permissions.add(*permissions)
+                    self._handle_group_permissions(our_group, perms)
 
                 data = self.get_serializer(our_group).data
 
@@ -336,14 +387,145 @@ class GroupViewSet(ReadOnlyModelViewSet):
                 )
 
             except Exception as e:
+                LOGGER.warning(str(e))
                 return Response(
                     data={"message": "Unsuccessful", "detail": str(e)},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
         else:
-            details = "You don't have the necessary permissions"
+            detail = "You don't have the necessary permissions"
+            LOGGER.warning(detail)
             return Response(
-                data={"message": "Unsuccessful", "detail": details},
+                data={"message": "Unsuccessful", "detail": detail},
                 status=status.HTTP_401_UNAUTHORIZED
+            )
+
+    def update(self, request, pk=None):
+        user = request.user
+
+        if user.is_superuser or user.has_perm('change_group'):
+            group = request.data.get("group")
+            perms = request.data.get("permissions")
+
+            if not group:
+                detail = "group not provided"
+                LOGGER.info(detail)
+                return Response(
+                    data={"message": "Unsuccessful", "detail": detail},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                our_group = Group.objects.get(pk=pk)
+                our_group.updated_by = user.id
+
+                if perms:
+                    self._handle_group_permissions(our_group, perms)
+
+                detail = self.get_serializer(our_group).data
+
+                return Response(
+                    data={"message": "Successful", "detail": detail},
+                    status=status.HTTP_200_OK
+                )
+
+            except Exception as e:
+                LOGGER.warning(str(e))
+                return Response(
+                    data={"message": "Unsuccessful", "detail": str(e)},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        else:
+            detail = "You don't have the necessary permissions"
+            LOGGER.warning(detail)
+            return Response(
+                data={"message": "Unsuccessful", "detail": detail},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+    @action(methods=["delete"], detail=True)
+    def delete(self, request, pk=None):
+        user = request.user
+
+        if user.is_superuser or user.has_perm("delete_group"):
+            try:
+                count, detail = self.get_queryset().filter(pk=pk).delete()
+
+                return Response(
+                    data={
+                        "message": "Successful",
+                        "detail": f"Deleted: {detail}"
+                    },
+                    status=status.HTTP_200_OK
+                )
+
+            except Exception as e:
+                LOGGER.warning(str(e))
+                return Response(
+                    data={"message": "Unsuccessful", "detail": str(e)},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+    @action(methods=["post"], detail=True)
+    def add_user(self, request, pk=None):
+        user = request.user
+        user_id = request.data.get("user_id")
+
+        if not user.is_superuser and not user.has_perm("add_user_group"):
+            detail = "You don't have permissions to add user"
+            LOGGER.warning(detail)
+            return Response(
+                data={"message": "Unsuccessful", "detail": detail},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        try:
+            our_group = get_object_or_404(self.get_queryset(), pk=pk)
+            group_user = get_object_or_404(User, id=user_id)
+            group_user.groups.add(our_group)
+
+            detail = f" User {group_user} add to group {our_group.name}"
+            return Response(
+                data={"message": "Successful", "detail": detail},
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            LOGGER.warning(str(e))
+            return Response(
+                data={"message": "Unsuccessful", "detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(methods=["post"], detail=True)
+    def remove_user(self, request, pk=None):
+        user = request.user
+        user_id = request.data.get("user_id")
+
+        if not user.is_superuser and not user.has_perm("remove_user_group"):
+            detail = "You don't have permissions to add user"
+            LOGGER.warning(detail)
+            return Response(
+                data={"message": "Unsuccessful", "detail": detail},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        try:
+            our_group = get_object_or_404(self.get_queryset(), pk=pk)
+            group_user = get_object_or_404(User, id=user_id)
+            group_user.groups.remove(our_group)
+
+            detail = f" User {group_user} removed from group {our_group.name}"
+            return Response(
+                data={"message": "Successful", "detail": detail},
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            LOGGER.warning(str(e))
+            return Response(
+                data={"message": "Unsuccessful", "detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
             )
