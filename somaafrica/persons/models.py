@@ -1,8 +1,12 @@
 import uuid
 
 from django.conf import settings
-from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
-from django.contrib.auth.models import PermissionsMixin
+from django.contrib.auth.models import (
+    BaseUserManager,
+    AbstractBaseUser,
+    PermissionsMixin,
+    Group as AuthGroup
+)
 from django.db import models
 
 from somaafrica.commons.phone_validator import validate_phone_number
@@ -90,11 +94,20 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampModel):
         permissions = [
             ("modify_other_user", "Can modify other user"),
             ("delete_other_user", "Can delete other User"),
-            ("delete_own_user", "Can delete own user recrord")
+            ("delete_own_user", "Can delete own user recrord"),
+            ("add_user_group", "Can add user to group"),
+            ("remove_user_group", "Can remove user from group")
         ]
 
     def __str__(self):
         return f"{self.id} - {self.username} - {self.email}"
+
+
+class Group(UserTimeStampModel, AuthGroup):
+
+    class Meta:
+        verbose_name = "Custom Group"
+        verbose_name_plural = "Custom Groups"
 
 
 class Phone(UserTimeStampModel):

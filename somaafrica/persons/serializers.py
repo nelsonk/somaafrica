@@ -1,7 +1,7 @@
-from django.contrib.auth.models import Group, Permission
+from django.contrib.auth.models import Permission
 from rest_framework import serializers
 
-from .models import User, Address, Phone, Person
+from .models import User, Address, Phone, Person, Group
 
 
 class PermissionSerializer(serializers.ModelSerializer):
