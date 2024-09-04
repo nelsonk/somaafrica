@@ -15,21 +15,19 @@ class SomaAfricaBackend(BaseBackend):
         username = kwargs["username"]
         password = kwargs["password"]
 
-        if not username or not password:
-            return None
+        return raw_authenticate(username, password)
 
-        try:
-            user = User.objects.get(Q(username=username) | Q(email=username))
-            password_mathches = user.check_password(password)
 
-            if password_mathches:
-                return user
-            raise AuthenticationError("Invalid password")
-        except User.DoesNotExist:
-            raise
+def raw_authenticate(username, password):
+    if not username or not password:
+        return None
 
-    def get_user(self, user_id):
-        try:
-            return User.objects.get(pk=user_id)
-        except User.DoesNotExist:
-            return None
+    try:
+        user = User.objects.get(Q(username=username) | Q(email=username))
+        password_mathches = user.check_password(password)
+
+        if password_mathches:
+            return user
+        raise AuthenticationError("Invalid password")
+    except User.DoesNotExist:
+        raise

@@ -12,7 +12,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 from social_core.backends.google import GoogleOAuth2
 from social_core.backends.facebook import FacebookOAuth2
@@ -163,7 +163,7 @@ class LogoutJWTAPIView(APIView):
             )
 
 
-class UserViewSet(ReadOnlyModelViewSet):
+class UserViewSet(ModelViewSet):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [
@@ -182,6 +182,16 @@ class UserViewSet(ReadOnlyModelViewSet):
     ordering_fields = ['username', 'email', 'id', 'created_at', 'updated_at']
     ordering = 'created_at'
 
+    perms_map = {
+        'GET': ['add_user'],
+        'OPTIONS': [],
+        'HEAD': [],
+        'POST': [],
+        'PUT': ['modify_other_user'],
+        'PATCH': [],
+        'DELETE': ['delete_other_user'],
+    }
+
     def get_queryset(self):
         user_id = self.request.user.id
         admin_user = self.request.user.is_superuser
@@ -190,35 +200,6 @@ class UserViewSet(ReadOnlyModelViewSet):
             return User.objects.all()
 
         return User.objects.filter(id=user_id)
-
-    def update(self, request, pk=None):
-        user = request.user
-
-        try:
-            data = {
-                "username": request.data.get("username", None),
-                "email": request.data.get("email", None),
-                "is_active": request.data.get("is_active", None)
-            }
-
-            if user.is_superuser:
-                data["is_staff"] = request.data.get("is_staff", None)
-                data["is_superuser"] = request.data.get("is_superuser", None)
-
-            count = self.get_queryset().filter(pk=pk).update(**data)
-
-            detail = f"{count} records updated"
-            return Response(
-                data={"message": "Successful", "detail": detail},
-                status=status.HTTP_200_OK
-            )
-
-        except Exception as e:
-            LOGGER.warning(str(e))
-            return Response(
-                data={"message": "Unsuccessful", "detail": str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
     @action(methods=['put'], detail=True)
     def change_password(self, request, pk=None):
@@ -241,8 +222,7 @@ class UserViewSet(ReadOnlyModelViewSet):
 
         try:
             user = get_object_or_404(self.get_queryset(), pk=pk)
-            user.set_password(password1)
-            user.save()
+            user.change_password(password=password1)
             detail = (self.get_serializer(user)).data
 
             return Response(
@@ -256,37 +236,6 @@ class UserViewSet(ReadOnlyModelViewSet):
                 {"message": "Unsuccessful", "detail": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-    @action(methods=['delete'], detail=True)
-    def delete(self, request, pk=None):
-        try:
-            count, _ = self.get_queryset().filter(pk=pk).delete()
-            return Response(
-                {"message": f" {count} User deleted successfully"}
-            )
-
-        except Exception as e:
-            LOGGER.warning(str(e))
-            return Response(
-                {"message": "Unsuccessful", "detail": str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-    @action(methods=['get'], detail=False)
-    def list_active_users(self, request):
-        # Filtering the queryset
-        data = self.get_queryset().filter(is_active=True)
-        queryset = self.filter_queryset(data)
-
-        # Paginating the queryset manually
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        # Fallback if pagination is not required
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
 
 
 class PermissionViewSet(ReadOnlyModelViewSet):
@@ -325,7 +274,7 @@ class PermissionViewSet(ReadOnlyModelViewSet):
     ordering = 'content_type'
 
 
-class GroupViewSet(ReadOnlyModelViewSet):
+class GroupViewSet(ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     permission_classes = [IsAuthenticated]
@@ -344,6 +293,16 @@ class GroupViewSet(ReadOnlyModelViewSet):
     ordering_fields = ['id', 'name', 'permissions__codename', 'user__id']
     ordering = 'name'
 
+    perms_map = {
+        'GET': ['add_group'],
+        'OPTIONS': [],
+        'HEAD': [],
+        'POST': [],
+        'PUT': [],
+        'PATCH': [],
+        'DELETE': [],
+    }
+
     def _handle_group_permissions(self, group, perms):
         try:
             permissions = Permission.objects.filter(codename__in=perms)
@@ -353,128 +312,128 @@ class GroupViewSet(ReadOnlyModelViewSet):
         except Exception as e:
             raise e
 
-    def create(self, request):
-        user = request.user
+    # def create(self, request):
+    #     user = request.user
 
-        if user.is_superuser or user.has_perm('add_group'):
-            group = request.data.get("group")
-            perms = request.data.get("permissions")
+    #     # if user.is_superuser or user.has_perm('add_group'):
+    #     group = request.data.get("group")
+    #     perms = request.data.get("permissions")
 
-            if not group:
-                detail = "group not provided"
-                LOGGER.info(detail)
-                return Response(
-                    data={"message": "Unsuccessful", "detail": detail},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+    #     # if not group:
+    #     #     detail = "group not provided"
+    #     #     LOGGER.info(detail)
+    #     #     return Response(
+    #     #         data={"message": "Unsuccessful", "detail": detail},
+    #     #         status=status.HTTP_400_BAD_REQUEST
+    #     #     )
 
-            try:
-                defaults = {
-                    "name": group,
-                    "created_by": user.id,
-                    "updated_by": user.id
-                }
-                our_group = Group.objects.create(**defaults)
+    #     try:
+    #         defaults = {
+    #             "name": group,
+    #             "created_by": user.id,
+    #             "updated_by": user.id
+    #         }
+    #         our_group = Group.objects.create(**defaults)
 
-                if perms:
-                    self._handle_group_permissions(our_group, perms)
+    #         if perms:
+    #             self._handle_group_permissions(our_group, perms)
 
-                data = self.get_serializer(our_group).data
+    #         data = self.get_serializer(our_group).data
 
-                return Response(
-                    data={"message": "Successful", "detail": data},
-                    status=status.HTTP_200_OK
-                )
+    #         return Response(
+    #             data={"message": "Successful", "detail": data},
+    #             status=status.HTTP_200_OK
+    #         )
 
-            except Exception as e:
-                LOGGER.warning(str(e))
-                return Response(
-                    data={"message": "Unsuccessful", "detail": str(e)},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+    #     except Exception as e:
+    #         LOGGER.warning(str(e))
+    #         return Response(
+    #             data={"message": "Unsuccessful", "detail": str(e)},
+    #             status=status.HTTP_400_BAD_REQUEST
+    #         )
 
-        else:
-            detail = "You don't have the necessary permissions"
-            LOGGER.warning(detail)
-            return Response(
-                data={"message": "Unsuccessful", "detail": detail},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+    #     # else:
+    #     #     detail = "You don't have the necessary permissions"
+    #     #     LOGGER.warning(detail)
+    #     #     return Response(
+    #     #         data={"message": "Unsuccessful", "detail": detail},
+    #     #         status=status.HTTP_401_UNAUTHORIZED
+    #     #     )
 
-    def update(self, request, pk=None):
-        user = request.user
+    # def update(self, request, pk=None):
+    #     user = request.user
 
-        if user.is_superuser or user.has_perm('change_group'):
-            group = request.data.get("group")
-            perms = request.data.get("permissions")
+    #     if user.is_superuser or user.has_perm('change_group'):
+    #         group = request.data.get("group")
+    #         perms = request.data.get("permissions")
 
-            if not group:
-                detail = "group not provided"
-                LOGGER.info(detail)
-                return Response(
-                    data={"message": "Unsuccessful", "detail": detail},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+    #         if not group:
+    #             detail = "group not provided"
+    #             LOGGER.info(detail)
+    #             return Response(
+    #                 data={"message": "Unsuccessful", "detail": detail},
+    #                 status=status.HTTP_400_BAD_REQUEST
+    #             )
 
-            try:
-                our_group = Group.objects.get(pk=pk)
-                our_group.updated_by = user.id
+    #         try:
+    #             our_group = Group.objects.get(pk=pk)
+    #             our_group.updated_by = user.id
 
-                if perms:
-                    self._handle_group_permissions(our_group, perms)
+    #             if perms:
+    #                 self._handle_group_permissions(our_group, perms)
 
-                detail = self.get_serializer(our_group).data
+    #             detail = self.get_serializer(our_group).data
 
-                return Response(
-                    data={"message": "Successful", "detail": detail},
-                    status=status.HTTP_200_OK
-                )
+    #             return Response(
+    #                 data={"message": "Successful", "detail": detail},
+    #                 status=status.HTTP_200_OK
+    #             )
 
-            except Exception as e:
-                LOGGER.warning(str(e))
-                return Response(
-                    data={"message": "Unsuccessful", "detail": str(e)},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+    #         except Exception as e:
+    #             LOGGER.warning(str(e))
+    #             return Response(
+    #                 data={"message": "Unsuccessful", "detail": str(e)},
+    #                 status=status.HTTP_400_BAD_REQUEST
+    #             )
 
-        else:
-            detail = "You don't have the necessary permissions"
-            LOGGER.warning(detail)
-            return Response(
-                data={"message": "Unsuccessful", "detail": detail},
-                status=status.HTTP_403_FORBIDDEN
-            )
+    #     else:
+    #         detail = "You don't have the necessary permissions"
+    #         LOGGER.warning(detail)
+    #         return Response(
+    #             data={"message": "Unsuccessful", "detail": detail},
+    #             status=status.HTTP_403_FORBIDDEN
+    #         )
 
-    @action(methods=["delete"], detail=True)
-    def delete(self, request, pk=None):
-        user = request.user
+    # @action(methods=["delete"], detail=True)
+    # def delete(self, request, pk=None):
+    #     user = request.user
 
-        if user.is_superuser or user.has_perm("delete_group"):
-            try:
-                count, detail = self.get_queryset().filter(pk=pk).delete()
+    #     if user.is_superuser or user.has_perm("delete_group"):
+    #         try:
+    #             count, detail = self.get_queryset().filter(pk=pk).delete()
 
-                return Response(
-                    data={
-                        "message": "Successful",
-                        "detail": f"Deleted: {detail}"
-                    },
-                    status=status.HTTP_200_OK
-                )
+    #             return Response(
+    #                 data={
+    #                     "message": "Successful",
+    #                     "detail": f"Deleted: {detail}"
+    #                 },
+    #                 status=status.HTTP_200_OK
+    #             )
 
-            except Exception as e:
-                LOGGER.warning(str(e))
-                return Response(
-                    data={"message": "Unsuccessful", "detail": str(e)},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+    #         except Exception as e:
+    #             LOGGER.warning(str(e))
+    #             return Response(
+    #                 data={"message": "Unsuccessful", "detail": str(e)},
+    #                 status=status.HTTP_400_BAD_REQUEST
+    #             )
 
     @action(methods=["post"], detail=True)
     def add_user(self, request, pk=None):
         user = request.user
-        user_id = request.data.get("user_id")
+        user_guid = request.data.get("user_id")
 
-        if not user.is_superuser and not user.has_perm("add_user_group"):
-            detail = "You don't have permissions to add user"
+        if not user.has_perm("add_user_to_group"):
+            detail = "You don't have permissions to add user to group"
             LOGGER.warning(detail)
             return Response(
                 data={"message": "Unsuccessful", "detail": detail},
@@ -483,12 +442,13 @@ class GroupViewSet(ReadOnlyModelViewSet):
 
         try:
             our_group = get_object_or_404(self.get_queryset(), pk=pk)
-            group_user = get_object_or_404(User, id=user_id)
-            group_user.groups.add(our_group)
+            our_group.add_user_to_group(user_guid)
 
-            detail = f" User {group_user} add to group {our_group.name}"
+            our_group.refresh_from_db()
+            our_data = self.get_serializer(our_group).data
+
             return Response(
-                data={"message": "Successful", "detail": detail},
+                data=our_data,
                 status=status.HTTP_200_OK
             )
 
