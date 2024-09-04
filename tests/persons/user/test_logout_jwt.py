@@ -1,7 +1,23 @@
 import time
+from datetime import timedelta
 
 import pytest
+
 from django.urls import reverse
+from django.test import override_settings
+
+
+OVERRIDE_SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(seconds=3),
+    "REFRESH_TOKEN_LIFETIME": timedelta(seconds=3),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+
+    "ALGORITHM": "HS256",
+
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION"
+}
 
 
 class TestLogoutJWT:
@@ -56,6 +72,7 @@ class TestLogoutJWT:
         assert response.status_code == 400
         assert "Failed" in response.json()["detail"]
 
+    @override_settings(SIMPLE_JWT=OVERRIDE_SIMPLE_JWT)
     def test_with_expired_refresh_token(self, settings, client):
         tokens = self.response.json()
         access_token = tokens["access"]
@@ -66,6 +83,7 @@ class TestLogoutJWT:
         data = {
             "refresh": refresh_token
         }
+        # pdb.set_trace()
         time.sleep(
             int(
                 settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds()
@@ -105,6 +123,7 @@ class TestLogoutJWT:
         assert response.status_code == 400
         assert "Failed" in response.json()["detail"]
 
+    @override_settings(SIMPLE_JWT=OVERRIDE_SIMPLE_JWT)
     def test_with_expired_access_token(self, settings, client):
         tokens = self.response.json()
         access_token = tokens["access"]

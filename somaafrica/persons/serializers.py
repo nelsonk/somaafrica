@@ -11,18 +11,19 @@ class PermissionSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class GroupSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Group
-        fields = '__all__'
-
-
 class UserSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)  # passwd not returned
+    # password = serializers.CharField(write_only=True)  # passwd not returned
 
     class Meta:
         model = User
+        exclude = ['password']
+
+
+class GroupSerializer(serializers.ModelSerializer):
+    group_members = UserSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Group
         fields = '__all__'
 
 

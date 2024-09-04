@@ -1,6 +1,7 @@
 database.ini
 migrations/
 *log*
+views_not.py
 
 # Editors
 .vscode/

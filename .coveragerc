@@ -1,0 +1,12 @@
+[run]
+branch = True
+source = somaafrica
+omit = somaafrica/config/*, *__init__.py, */migrations/*
+
+[report]
+show_missing = True
+precision = 2
+exclude_lines = pragma: no cover
+
+[html]
+directory=coverage

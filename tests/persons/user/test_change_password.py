@@ -1,6 +1,8 @@
 import pytest
 from django.urls import reverse
 
+from somaafrica.commons.authentication_backends import raw_authenticate
+
 
 class TestListUsers:
     @pytest.fixture
@@ -57,6 +59,15 @@ class TestListUsers:
 
         assert response.status_code == 200
         assert "usertest" in response.json()["detail"]["username"]
+
+        authenticated_user = raw_authenticate(
+            "usertest",
+            self.data["password1"]
+        )
+        assert authenticated_user is not None
+        user_model = "<class 'somaafrica.persons.models.User'>"
+        assert str(type(authenticated_user)) == user_model
+        assert authenticated_user.username == "usertest"
 
     def test_change_other_user_password_as_superuser(self, client):
         tokens = self.response1.json()
