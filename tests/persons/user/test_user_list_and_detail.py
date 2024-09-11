@@ -65,7 +65,10 @@ class CrudTest(TestCase):
         )
 
     def test_list_as_super_user(self):
-        response = self.client.get('/persons/user', **self.super_login_headers)
+        response = self.client.get(
+            '/persons/user',
+            **self.super_login_headers
+        )
         print(response.json())
 
         self.assertEqual(response.status_code, 200)
@@ -73,7 +76,7 @@ class CrudTest(TestCase):
 
     def test_list_super_user_detail_using_normal_user(self):
         response = self.client.get(
-            f"/persons/user/{self.super_user.id}",
+            f"/persons/user/{self.super_user.guid}",
             **self.login_headers
         )
         print(response.json())
@@ -86,14 +89,14 @@ class CrudTest(TestCase):
 
     def test_list_normal_user_detail_using_super_user(self):
         response = self.client.get(
-            f"/persons/user/{self.normal_user.id}",
+            f"/persons/user/{self.normal_user.guid}",
             **self.super_login_headers
         )
         print(response.json())
 
         self.assertContains(
             response=response,
-            text=self.normal_user.id,
+            text=self.normal_user.guid,
             status_code=200
         )
 
@@ -185,7 +188,7 @@ class CrudTest(TestCase):
 
     def test_with_search_id(self):
         params = {
-            "id": self.normal_user.id
+            "guid": self.normal_user.guid
         }
 
         response = self.client.get(
@@ -195,11 +198,11 @@ class CrudTest(TestCase):
         )
         print(response.json())
 
-        self.assertContains(response, self.normal_user.id, status_code=200)
+        self.assertContains(response, self.normal_user.guid, status_code=200)
 
     def test_with_search_invalid_uuid(self):
         params = {
-            "id": "2"
+            "guid": "2"
         }
 
         response = self.client.get(
@@ -213,7 +216,7 @@ class CrudTest(TestCase):
 
     def test_with_search_id_not_found(self):
         params = {
-            "id": "a43c0664-1ab0-495e-8a0e-75ecb2c09f99"
+            "guid": "a43c0664-1ab0-495e-8a0e-75ecb2c09f99"
         }
 
         response = self.client.get(
@@ -230,7 +233,7 @@ class CrudTest(TestCase):
         params = {
             "username": "testuser",
             "email": "testuser@tests.com",
-            "id": str(self.normal_user.id)
+            "guid": str(self.normal_user.guid)
         }
 
         response = self.client.get(

@@ -40,7 +40,7 @@ class TestListUsers:
         }
 
         response = client.get(
-            reverse("user-detail", kwargs={"pk": self.user.id}),
+            reverse("user-detail", kwargs={"pk": self.user.guid}),
             **headers
         )
         print(response.json())
@@ -56,7 +56,7 @@ class TestListUsers:
         }
 
         response = client.get(
-            reverse("user-detail", kwargs={"pk": self.user.id}),
+            reverse("user-detail", kwargs={"pk": self.user.guid}),
             **headers
         )
         print(response.json())
@@ -72,7 +72,7 @@ class TestListUsers:
         }
 
         response = client.get(
-            reverse("user-detail", kwargs={"pk": self.user1.id}),
+            reverse("user-detail", kwargs={"pk": self.user1.guid}),
             **headers
         )
         print(response.json())
@@ -82,7 +82,7 @@ class TestListUsers:
 
     def test_with_no_token(self, client):
         response = client.get(
-            reverse("user-detail", kwargs={"pk": self.user.id})
+            reverse("user-detail", kwargs={"pk": self.user.guid})
         )
         print(response.json())
 
@@ -96,7 +96,7 @@ class TestListUsers:
         }
 
         response = client.get(
-            reverse("user-detail", kwargs={"pk": self.user.id}),
+            reverse("user-detail", kwargs={"pk": self.user.guid}),
             **headers
         )
         print(response.json())
