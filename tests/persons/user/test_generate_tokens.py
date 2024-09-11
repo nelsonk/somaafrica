@@ -1,114 +1,121 @@
-import pytest
+from django.test import TestCase
 from django.urls import reverse
 
+from model_bakery import baker
+
 from somaafrica.commons.authentication_backends import AuthenticationError
+from somaafrica.persons.models import User
 
 
-class TestGenerateTokens:
-    @pytest.fixture(autouse=True)
-    def create_test_user(self, django_user_model):
+class TestGenerateTokens(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        user = baker.make(
+            'persons.User',
+            username="testuser",
+            email="testuser@tests.com"
+        )
+        user.set_password("testuser123")
+        user.save()
+
+    def test_with_right_credentials(self):
         data = {
             "username": "testuser",
-            "email": "testuser@tests.com",
             "password": "testuser123"
         }
 
-        django_user_model.objects.create_user(**data)
+        response = self.client.post(reverse("token_obtain_pair"), data)
 
-    def test_with_right_credentials(self, client):
-        data = {
-            "username": "testuser",
-            "password": "testuser123"
-        }
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["access"] is not None)
+        self.assertTrue(response.json()["refresh"] is not None)
 
-        response = client.post(reverse("token_obtain_pair"), data)
-
-        assert response.status_code == 200
-        assert response.json()["access"] is not None
-        assert response.json()["refresh"] is not None
-
-    def test_with_wrong_username(self, django_user_model, client):
+    def test_with_wrong_username(self):
         data = {
             "username": "testuser1",
             "password": "testuser123"
         }
 
-        with pytest.raises(django_user_model.DoesNotExist):
-            response = client.post(reverse("token_obtain_pair"), data)
+        with self.assertRaises(User.DoesNotExist):
+            response = self.client.post(reverse("token_obtain_pair"), data)
             print(response.json())
 
-    def test_with_wrong_password(self, client):
+    def test_with_wrong_password(self):
         data = {
             "username": "testuser",
             "password": "testuser1"
         }
 
-        with pytest.raises(AuthenticationError):
-            response = client.post(reverse("token_obtain_pair"), data)
+        with self.assertRaises(AuthenticationError):
+            response = self.client.post(reverse("token_obtain_pair"), data)
             print(response.json())
 
-    def test_with_no_password(self, client):
+    def test_with_no_password(self):
         data = {
             "username": "testuser",
         }
 
-        response = client.post(reverse("token_obtain_pair"), data)
+        response = self.client.post(reverse("token_obtain_pair"), data)
         print(response.json())
 
-        assert response.status_code == 400
-        assert "field is required" in response.json()["password"][0]
+        self.assertContains(response, "field is required", status_code=400)
 
-    def test_with_no_username(self, client):
+    def test_with_no_username(self):
         data = {
             "password": "testuser",
         }
 
-        response = client.post(reverse("token_obtain_pair"), data)
+        response = self.client.post(reverse("token_obtain_pair"), data)
         print(response.json())
 
-        assert response.status_code == 400
-        assert "field is required" in response.json()["username"][0]
+        self.assertContains(response, "field is required", status_code=400)
 
-    def test_with_username_empty(self, client):
+    def test_with_username_empty(self):
         data = {
             "password": "testuser",
             "username": ""
         }
 
-        response = client.post(reverse("token_obtain_pair"), data)
+        response = self.client.post(reverse("token_obtain_pair"), data)
         print(response.json())
 
-        assert response.status_code == 400
-        assert "field may not be blank" in response.json()["username"][0]
+        self.assertContains(
+            response,
+            "field may not be blank",
+            status_code=400
+        )
 
-    def test_with_password_empty(self, client):
+    def test_with_password_empty(self):
         data = {
             "password": "",
             "username": "testuser"
         }
 
-        response = client.post(reverse("token_obtain_pair"), data)
+        response = self.client.post(reverse("token_obtain_pair"), data)
         print(response.json())
 
-        assert response.status_code == 400
-        assert "field may not be blank" in response.json()["password"][0]
+        self.assertContains(
+            response,
+            "field may not be blank",
+            status_code=400
+        )
 
-    def test_with_no_credentials(self, client):
-        response = client.post(reverse("token_obtain_pair"))
+    def test_with_no_credentials(self):
+        response = self.client.post(reverse("token_obtain_pair"))
         print(response.json())
 
-        assert response.status_code == 400
-        assert "field is required" in response.json()["username"][0]
-        assert "field is required" in response.json()["password"][0]
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue("field is required" in response.json()["username"][0])
+        self.assertTrue("field is required" in response.json()["password"][0])
 
-    def test_with_email(self, client):
+    def test_with_email(self):
         data = {
             "username": "testuser@tests.com",
             "password": "testuser123"
         }
 
-        response = client.post(reverse("token_obtain_pair"), data)
+        response = self.client.post(reverse("token_obtain_pair"), data)
 
-        assert response.status_code == 200
-        assert response.json()["access"] is not None
-        assert response.json()["refresh"] is not None
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["access"] is not None)
+        self.assertTrue(response.json()["refresh"] is not None)

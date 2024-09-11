@@ -1,111 +1,112 @@
-import pytest
+from django.test import TestCase
 from django.urls import reverse
 
+from model_bakery import baker
 
-class TestLogin:
-    @pytest.fixture(autouse=True)
-    def create_test_user(self, django_user_model):
-        django_user_model.objects.create_user(
+
+class TestLogin(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        user = baker.make(
+            'persons.User',
             username="testuser",
-            email="testuser@tests.com",
-            password="testuser"
+            email="testuser@tests.com"
         )
+        user.set_password("testuser")
+        user.save()
 
-    def test_login_with_username(self, client):
+    def test_login_with_username(self):
         credentials = {
             "username": "testuser",
             "password": "testuser"
         }
 
-        response = client.post(reverse("login"), credentials)
+        response = self.client.post(reverse("login"), credentials)
 
-        assert response.status_code == 200
-        assert "Successful" in response.json()["message"]
+        self.assertContains(response, "Successful", status_code=200)
 
-    def test_login_with_email(self, client):
+    def test_login_with_email(self):
         credentials = {
             "username": "testuser@tests.com",
             "password": "testuser"
         }
 
-        response = client.post(reverse("login"), credentials)
+        response = self.client.post(reverse("login"), credentials)
 
-        assert response.status_code == 200
-        assert "Successful" in response.json()["message"]
+        self.assertContains(response, "Successful", status_code=200)
 
-    def test_invalid_password(self, client):
+    def test_invalid_password(self):
         credentials = {
             "username": "testuser",
             "password": "test"
         }
 
-        response = client.post(reverse("login"), credentials)
+        response = self.client.post(reverse("login"), credentials)
 
-        assert response.status_code == 400
-        assert "Invalid password" in response.json()["detail"]
+        self.assertContains(response, "Invalid password", status_code=400)
 
-    def test_user_not_found(self, client):
+    def test_user_not_found(self):
         credentials = {
             "username": "test",
             "password": "test"
         }
 
-        response = client.post(reverse("login"), credentials)
+        response = self.client.post(reverse("login"), credentials)
 
-        assert response.status_code == 400
-        assert "does not exist" in response.json()["detail"]
+        self.assertContains(response, "does not exist", status_code=400)
 
-    def test_username_missing(self, client):
+    def test_username_missing(self):
         credentials = {
             "password": "test"
         }
 
-        response = client.post(reverse("login"), credentials)
+        response = self.client.post(reverse("login"), credentials)
 
-        assert response.status_code == 400
-        assert "field is required" in response.json()["username"][0]
+        self.assertContains(response, "field is required", status_code=400)
 
-    def test_password_missing(self, client):
+    def test_password_missing(self):
         credentials = {
             "username": "test"
         }
 
-        response = client.post(reverse("login"), credentials)
+        response = self.client.post(reverse("login"), credentials)
 
-        assert response.status_code == 400
-        assert "field is required" in response.json()["password"][0]
+        self.assertContains(response, "field is required", status_code=400)
 
-    def test_username_password_missing(self, client):
-        response = client.post(reverse("login"))
+    def test_username_password_missing(self):
+        response = self.client.post(reverse("login"))
 
-        assert response.status_code == 400
-        assert "field is required" in response.json()["username"][0]
-        assert "field is required" in response.json()["password"][0]
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue("field is required" in response.json()["username"][0])
+        self.assertTrue("field is required" in response.json()["password"][0])
 
-    def test_username_password_empty(self, client):
+    def test_username_password_empty(self):
         credentials = {
             "username": "",
             "password": ""
         }
 
-        response = client.post(reverse("login"), credentials)
+        response = self.client.post(reverse("login"), credentials)
 
-        assert response.status_code == 400
-        assert "field may not be blank" in response.json()["username"][0]
-        assert "field may not be blank" in response.json()["password"][0]
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(
+            "field may not be blank" in response.json()["username"][0]
+        )
+        self.assertTrue(
+            "field may not be blank" in response.json()["password"][0]
+        )
 
-    def test_login_with_non_post(self, client):
+    def test_login_with_non_post(self):
         credentials = {
             "username": "testuser",
             "password": "testuser"
         }
 
-        response = client.get(reverse("login"), credentials)
+        response = self.client.get(reverse("login"), credentials)
 
-        assert response.status_code == 405
-        assert 'Method "GET" not allowed' in response.json()["detail"]
+        self.assertContains(response, "not allowed", status_code=405)
 
-    def test_login_with_more_fields(self, client):
+    def test_login_with_more_fields(self):
         data = {
             "username": "testuser",
             "password": "testuser",
@@ -114,8 +115,7 @@ class TestLogin:
             "address": "kampala"
         }
 
-        response = client.post(reverse("login"), data)
+        response = self.client.post(reverse("login"), data)
         print(response.json())
 
-        assert response.status_code == 200
-        assert "Successful" in response.json()["message"]
+        self.assertContains(response, "Successful", status_code=200)

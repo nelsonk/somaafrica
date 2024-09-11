@@ -19,13 +19,14 @@ from social_core.backends.facebook import FacebookOAuth2
 from social_core.exceptions import AuthException
 from social_core.actions import do_complete
 
-from .models import User, Group
+from .models import User, Group, Person
 from .serializers import (
     UserSerializer,
     UserSignupSerializer,
     UserLoginSerializer,
     GroupSerializer,
-    PermissionSerializer
+    PermissionSerializer,
+    PersonSerializer
 )
 
 
@@ -174,12 +175,12 @@ class UserViewSet(ModelViewSet):
     filterset_fields = {
         'username': ['exact'],
         'email': ['exact'],
-        "id": ['exact'],
+        "guid": ['exact'],
         'is_active': ['exact'],
         'is_superuser': ['exact']
     }
-    search_fields = ['username', 'email', 'id', 'created_at', 'updated_at']
-    ordering_fields = ['username', 'email', 'id', 'created_at', 'updated_at']
+    search_fields = ['username', 'email', 'guid', 'created_at', 'updated_at']
+    ordering_fields = ['username', 'email', 'guid', 'created_at', 'updated_at']
     ordering = 'created_at'
 
     perms_map = {
@@ -193,13 +194,13 @@ class UserViewSet(ModelViewSet):
     }
 
     def get_queryset(self):
-        user_id = self.request.user.id
+        user_id = self.request.user.guid
         admin_user = self.request.user.is_superuser
 
         if admin_user or self.request.user.has_perm("add_user"):
             return User.objects.all()
 
-        return User.objects.filter(id=user_id)
+        return User.objects.filter(guid=user_id)
 
     @action(methods=['put'], detail=True)
     def change_password(self, request, pk=None):
@@ -253,7 +254,7 @@ class PermissionViewSet(ReadOnlyModelViewSet):
         'group__name': ['exact'],
         'id': ['exact'],
         'name': ['exact'],
-        'user__id': ['exact']
+        'user__guid': ['exact']
     }
     search_fields = [
         'codename',
@@ -261,7 +262,7 @@ class PermissionViewSet(ReadOnlyModelViewSet):
         'group__name',
         'id',
         'name',
-        'user__id'
+        'user__guid'
     ]
     ordering_fields = [
         'codename',
@@ -269,7 +270,7 @@ class PermissionViewSet(ReadOnlyModelViewSet):
         'group__name',
         'id',
         'name',
-        'user__id'
+        'user__guid'
     ]
     ordering = 'content_type'
 
@@ -284,13 +285,13 @@ class GroupViewSet(ModelViewSet):
         filters.OrderingFilter
     ]
     filterset_fields = {
-        'id': ['exact'],
+        'guid': ['exact'],
         'name': ['exact'],
         'permissions__codename': ['exact'],
-        'user__id': ['exact']
+        'user__guid': ['exact']
     }
-    search_fields = ['id', 'name', 'permissions__codename', 'user__id']
-    ordering_fields = ['id', 'name', 'permissions__codename', 'user__id']
+    search_fields = ['guid', 'name', 'permissions__codename', 'user__guid']
+    ordering_fields = ['guid', 'name', 'permissions__codename', 'user__guid']
     ordering = 'name'
 
     perms_map = {
@@ -312,120 +313,29 @@ class GroupViewSet(ModelViewSet):
         except Exception as e:
             raise e
 
-    # def create(self, request):
-    #     user = request.user
+    @action(methods="post", detail=True)
+    def update_permission(self, request, pk):
+        perms = request.data.get("permissions")
 
-    #     # if user.is_superuser or user.has_perm('add_group'):
-    #     group = request.data.get("group")
-    #     perms = request.data.get("permissions")
+        if not perms:
+            return Response(
+                data={"message": "List of permission codenames not provided"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-    #     # if not group:
-    #     #     detail = "group not provided"
-    #     #     LOGGER.info(detail)
-    #     #     return Response(
-    #     #         data={"message": "Unsuccessful", "detail": detail},
-    #     #         status=status.HTTP_400_BAD_REQUEST
-    #     #     )
+        try:
+            our_group = get_object_or_404(self.get_queryset(), pk=pk)
+            self._handle_group_permissions(our_group, perms)
 
-    #     try:
-    #         defaults = {
-    #             "name": group,
-    #             "created_by": user.id,
-    #             "updated_by": user.id
-    #         }
-    #         our_group = Group.objects.create(**defaults)
+            our_group.refresh_from_db()
+            our_data = self.get_serializer(our_group).data
+            return Response(data=our_data, status=status.HTTP_200_OK)
 
-    #         if perms:
-    #             self._handle_group_permissions(our_group, perms)
-
-    #         data = self.get_serializer(our_group).data
-
-    #         return Response(
-    #             data={"message": "Successful", "detail": data},
-    #             status=status.HTTP_200_OK
-    #         )
-
-    #     except Exception as e:
-    #         LOGGER.warning(str(e))
-    #         return Response(
-    #             data={"message": "Unsuccessful", "detail": str(e)},
-    #             status=status.HTTP_400_BAD_REQUEST
-    #         )
-
-    #     # else:
-    #     #     detail = "You don't have the necessary permissions"
-    #     #     LOGGER.warning(detail)
-    #     #     return Response(
-    #     #         data={"message": "Unsuccessful", "detail": detail},
-    #     #         status=status.HTTP_401_UNAUTHORIZED
-    #     #     )
-
-    # def update(self, request, pk=None):
-    #     user = request.user
-
-    #     if user.is_superuser or user.has_perm('change_group'):
-    #         group = request.data.get("group")
-    #         perms = request.data.get("permissions")
-
-    #         if not group:
-    #             detail = "group not provided"
-    #             LOGGER.info(detail)
-    #             return Response(
-    #                 data={"message": "Unsuccessful", "detail": detail},
-    #                 status=status.HTTP_400_BAD_REQUEST
-    #             )
-
-    #         try:
-    #             our_group = Group.objects.get(pk=pk)
-    #             our_group.updated_by = user.id
-
-    #             if perms:
-    #                 self._handle_group_permissions(our_group, perms)
-
-    #             detail = self.get_serializer(our_group).data
-
-    #             return Response(
-    #                 data={"message": "Successful", "detail": detail},
-    #                 status=status.HTTP_200_OK
-    #             )
-
-    #         except Exception as e:
-    #             LOGGER.warning(str(e))
-    #             return Response(
-    #                 data={"message": "Unsuccessful", "detail": str(e)},
-    #                 status=status.HTTP_400_BAD_REQUEST
-    #             )
-
-    #     else:
-    #         detail = "You don't have the necessary permissions"
-    #         LOGGER.warning(detail)
-    #         return Response(
-    #             data={"message": "Unsuccessful", "detail": detail},
-    #             status=status.HTTP_403_FORBIDDEN
-    #         )
-
-    # @action(methods=["delete"], detail=True)
-    # def delete(self, request, pk=None):
-    #     user = request.user
-
-    #     if user.is_superuser or user.has_perm("delete_group"):
-    #         try:
-    #             count, detail = self.get_queryset().filter(pk=pk).delete()
-
-    #             return Response(
-    #                 data={
-    #                     "message": "Successful",
-    #                     "detail": f"Deleted: {detail}"
-    #                 },
-    #                 status=status.HTTP_200_OK
-    #             )
-
-    #         except Exception as e:
-    #             LOGGER.warning(str(e))
-    #             return Response(
-    #                 data={"message": "Unsuccessful", "detail": str(e)},
-    #                 status=status.HTTP_400_BAD_REQUEST
-    #             )
+        except Exception as e:
+            return Response(
+                data={"message": "Unsuccessful", "detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     @action(methods=["post"], detail=True)
     def add_user(self, request, pk=None):
@@ -474,7 +384,7 @@ class GroupViewSet(ModelViewSet):
 
         try:
             our_group = get_object_or_404(self.get_queryset(), pk=pk)
-            group_user = get_object_or_404(User, id=user_id)
+            group_user = get_object_or_404(User, guid=user_id)
             group_user.groups.remove(our_group)
 
             detail = f" User {group_user} removed from group {our_group.name}"
@@ -489,3 +399,33 @@ class GroupViewSet(ModelViewSet):
                 data={"message": "Unsuccessful", "detail": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class PersonViewSet(ModelViewSet):
+    queryset = Person.objects.all()
+    serializer_class = PersonSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter
+    ]
+    filterset_fields = {
+        'guid': ['exact'],
+        'name': ['exact'],
+        'permissions__codename': ['exact'],
+        'user__guid': ['exact']
+    }
+    search_fields = ['guid', 'name', 'permissions__codename', 'user__guid']
+    ordering_fields = ['guid', 'name', 'permissions__codename', 'user__guid']
+    ordering = 'name'
+
+    perms_map = {
+        'GET': ['add_group'],
+        'OPTIONS': [],
+        'HEAD': [],
+        'POST': [],
+        'PUT': [],
+        'PATCH': [],
+        'DELETE': [],
+    }

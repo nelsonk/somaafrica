@@ -53,7 +53,7 @@ class AddressSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Address
-        fields = ['id', 'address']
+        fields = '__all__'
 
 
 class PhoneSerializer(serializers.ModelSerializer):

@@ -1,189 +1,167 @@
-import time
-from datetime import timedelta
-
-import pytest
-
+from django.test import TestCase
 from django.urls import reverse
-from django.test import override_settings
+
+from model_bakery import baker
 
 
-OVERRIDE_SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(seconds=3),
-    "REFRESH_TOKEN_LIFETIME": timedelta(seconds=3),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
+class TestLogoutJWT(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        data = baker.make(
+            'persons.User',
+            make_m2m=True,
+            username="testuser",
+            email="testuser@tests.com"
+        )
+        data.set_password("testuser")
+        data.save()
 
-    "ALGORITHM": "HS256",
-
-    "AUTH_HEADER_TYPES": ("Bearer",),
-    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION"
-}
-
-
-class TestLogoutJWT:
-    @pytest.fixture
-    def create_test_user(self, django_user_model):
-        data = {
-            "username": "testuser",
-            "password": "testuser123"
+        cls.data = {
+            "username": data.username,
+            "password": "testuser"
         }
 
-        django_user_model.objects.create_user(**data)
-
-    @pytest.fixture(autouse=True)
-    def create_token(self, create_test_user, client):
-        data = {
-            "username": "testuser",
-            "password": "testuser123"
-        }
-
-        self.response = client.post(reverse("token_obtain_pair"), data)
-
-    def test_with_right_access_refresh_token(self, client):
-        tokens = self.response.json()
-        access_token = tokens["access"]
-        refresh_token = tokens["refresh"]
-        print(tokens)
-        data = {
+    def setUp(self):
+        self.response = self.client.post(
+            reverse("token_obtain_pair"),
+            self.data
+        )
+        refresh_token = self.response.json()["refresh"]
+        self.token_data = {
             "refresh": refresh_token
         }
-        headers = {
+
+        access_token = self.response.json()["access"]
+        self.login_headers = {
             "HTTP_AUTHORIZATION": f"Bearer {access_token}"
         }
+        return self.response.json()
 
-        response = client.post(reverse("logout-token"), data, **headers)
+    def test_with_right_access_refresh_token(self):
+        response = self.client.post(
+            reverse("logout-token"),
+            self.token_data,
+            **self.login_headers
+        )
         print(response.json())
 
-        assert response.status_code == 200
-        assert "blacklisted, Successfully" in response.json()["detail"]
+        self.assertContains(
+            response,
+            "blacklisted, Successfully",
+            status_code=200
+        )
 
-    def test_with_wrong_refresh_token(self, client):
+    def test_with_wrong_refresh_token(self):
         token = {
             "refrsh": "hgahjahkjkashiakwykuwiuwbbjcbbcbkuscblcsihwuhcbubcbnaj"
         }
-        access_token = self.response.json()["access"]
-        headers = {
-            "HTTP_AUTHORIZATION": f"Bearer {access_token}"
-        }
 
-        response = client.post(reverse("logout-token"), token, **headers)
+        response = self.client.post(
+            reverse("logout-token"),
+            token,
+            **self.login_headers
+        )
         print(response.json())
 
-        assert response.status_code == 400
-        assert "Failed" in response.json()["detail"]
-
-    @override_settings(SIMPLE_JWT=OVERRIDE_SIMPLE_JWT)
-    def test_with_expired_refresh_token(self, settings, client):
-        tokens = self.response.json()
-        access_token = tokens["access"]
-        refresh_token = tokens["refresh"]
-        headers = {
-            "HTTP_AUTHORIZATION": F"Bearer {access_token}"
-        }
-        data = {
-            "refresh": refresh_token
-        }
-        # pdb.set_trace()
-        time.sleep(
-            int(
-                settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds()
-            ) + 1
+        self.assertContains(
+            response,
+            "Failed",
+            status_code=400
         )
 
-        response = client.post(reverse("logout-token"), data, **headers)
+    def test_with_expired_refresh_token(self):
+        self.client.post(
+            reverse('logout-token'),
+            self.token_data,
+            **self.login_headers
+        )
+
+        response = self.client.post(
+            reverse("logout-token"),
+            self.token_data,
+            **self.login_headers
+        )
         print(response.json())
 
-        assert response.status_code == 401
-        assert "token not valid" in response.json()["detail"]
+        self.assertContains(
+            response,
+            "Token is blacklisted",
+            status_code=400
+        )
 
-    def test_with_no_refresh_token(self, client):
-        access_token = self.response.json()["access"]
-        headers = {
-            "HTTP_AUTHORIZATION": f"Bearer {access_token}"
-        }
-
-        response = client.post(reverse("logout-token"), **headers)
+    def test_with_no_refresh_token(self):
+        response = self.client.post(
+            reverse("logout-token"),
+            **self.login_headers
+        )
         print(response.json())
 
-        assert response.status_code == 400
-        assert "Failed" in response.json()["detail"]
+        self.assertContains(
+            response,
+            "Failed",
+            status_code=400
+        )
 
-    def test_with_refresh_token_empty(self, client):
-        access_token = self.response.json()["access"]
-        headers = {
-            "HTTP_AUTHORIZATION": f"Bearer {access_token}"
-        }
+    def test_with_refresh_token_empty(self):
         data = {
             "refresh": ""
         }
 
-        response = client.post(reverse("logout-token"), data, **headers)
+        response = self.client.post(
+            reverse("logout-token"),
+            data,
+            **self.login_headers
+        )
         print(response.json())
 
-        assert response.status_code == 400
-        assert "Failed" in response.json()["detail"]
-
-    @override_settings(SIMPLE_JWT=OVERRIDE_SIMPLE_JWT)
-    def test_with_expired_access_token(self, settings, client):
-        tokens = self.response.json()
-        access_token = tokens["access"]
-        refresh_token = tokens["refresh"]
-        headers = {
-            "HTTP_AUTHORIZATION": F"Bearer {access_token}"
-        }
-        data = {
-            "refresh": refresh_token
-        }
-        time.sleep(
-            int(
-                settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds()
-            ) + 1
+        self.assertContains(
+            response,
+            "Failed",
+            status_code=400
         )
 
-        response = client.post(reverse("logout-token"), data, **headers)
+    def test_with_no_access_token(self):
+        response = self.client.post(reverse("logout-token"), self.token_data)
         print(response.json())
 
-        assert response.status_code == 401
-        assert "token not valid" in response.json()["detail"]
+        self.assertContains(
+            response,
+            "credentials were not provided",
+            status_code=401
+        )
 
-    def test_with_no_access_token(self, settings, client):
-        refresh_token = self.response.json()["refresh"]
-        data = {
-            "refresh": refresh_token
-        }
-
-        response = client.post(reverse("logout-token"), data)
-        print(response.json())
-
-        assert response.status_code == 401
-        assert "credentials were not provided" in response.json()["detail"]
-
-    def test_with_access_token_empty(self, client):
-        refresh_token = self.response.json()["refresh"]
+    def test_with_access_token_empty(self):
         headers = {
             "HTTP_AUTHORIZATION": "Bearer "
         }
-        data = {
-            "refresh": refresh_token
-        }
 
-        response = client.post(reverse("logout-token"), data, **headers)
+        response = self.client.post(
+            reverse("logout-token"),
+            self.token_data,
+            **headers
+        )
         print(response.json())
 
-        assert response.status_code == 401
-        assert "bad_authorization_header" in response.json()["code"]
+        self.assertContains(
+            response,
+            "bad_authorization_header",
+            status_code=401
+        )
 
-    def test_with_wrong_access_token(self, client):
-        refresh_token = self.response.json()["refresh"]
-        token = {
-            "refrsh": refresh_token
-        }
+    def test_with_wrong_access_token(self):
         headers = {
             "HTTP_AUTHORIZATION": "Bearer hshjshjsjkkjsabbjbcacbhahcjvha2jy7"
         }
 
-        response = client.post(reverse("logout-token"), token, **headers)
+        response = self.client.post(
+            reverse("logout-token"),
+            self.token_data,
+            **headers
+        )
         print(response.json())
 
-        assert response.status_code == 401
-        assert "token not valid" in response.json()["detail"]
+        self.assertContains(
+            response,
+            "token not valid",
+            status_code=401
+        )

@@ -77,7 +77,7 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampModel):
     """
     Our custom user model
     """
-    id = models.UUIDField(
+    guid = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
         editable=False
@@ -103,7 +103,7 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampModel):
         ]
 
     def __str__(self):
-        return f"{self.id} - {self.username} - {self.email}"
+        return f"{self.guid} - {self.username} - {self.email}"
 
     def change_password(self, password):
         self.set_password(password)
@@ -112,6 +112,11 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampModel):
 
 
 class Group(UserTimeStampModel, AuthGroup):
+    guid = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
 
     class Meta:
         verbose_name = "Custom Group"
@@ -119,7 +124,7 @@ class Group(UserTimeStampModel, AuthGroup):
 
     def add_user_to_group(self, user_guid):
         try:
-            group_user = User.objects.get(id=user_guid)
+            group_user = User.objects.get(guid=user_guid)
             group_user.groups.add(self)
         except Exception as e:
             LOGGER.warning(str(e))
@@ -134,6 +139,11 @@ class Phone(UserTimeStampModel):
     """
     Phone Model
     """
+    guid = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
     number = models.CharField(
         max_length=20,
         validators=[validate_phone_number]
@@ -144,6 +154,11 @@ class Address(UserTimeStampModel):
     """
     Physical address model
     """
+    guid = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
     address = models.CharField(max_length=255)
 
 
@@ -151,7 +166,7 @@ class Person(UserTimeStampModel):
     """
     Person info model
     """
-    id = models.UUIDField(
+    guid = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
         editable=False

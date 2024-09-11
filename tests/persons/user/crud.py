@@ -41,11 +41,13 @@ class CRUD(TestCase):
         }
 
     def setUp(self):
-        print(f"Running setUp in {self.__class__.__name__}, model: {self.__class__.model}")
+        class_name = self.__class__.__name__
+        class_model = self.__class__.model
+        print(f"Running setUp in {class_name}, model: {class_model}")
 
         self.data = baker.prepare(self.__class__.model).__dict__
         self.data.pop('_state', None)
-        self.data.pop('id', None)
+        self.data.pop('guid', None)
 
         self.persistent_data = baker.make(
             self.__class__.model,
@@ -89,13 +91,17 @@ class CRUD(TestCase):
         response = self.client.get(
             reverse(
                 f"{self.base_url_name}-detail",
-                kwargs={"pk": self.persistent_data[0].id}
+                kwargs={"pk": self.persistent_data[0].guid}
             ),
             **self.super_login_headers
         )
         print(response)
 
-        self.assertContains(response, self.persistent_data[0].id, status_code=200)
+        self.assertContains(
+            response,
+            self.persistent_data[0].guid,
+            status_code=200
+        )
 
     def test_post_with_super_user(self):
         response = self.client.post(
@@ -107,7 +113,9 @@ class CRUD(TestCase):
         print(response.json())
 
         self.assertEqual(response.status_code, 201)
-        #self.assertTrue(self.__class__.model.objects.filter(id=self.data['id']).exists())
+        # self.assertTrue(
+        # self.__class__.model.objects.filter(id=self.data['id']).exists()
+        # )
 
     def test_post_un_authenticated(self):
         response = self.client.post(
@@ -127,7 +135,7 @@ class CRUD(TestCase):
         response = self.client.put(
             reverse(
                 f"{self.base_url_name}-detail",
-                kwargs={"pk": self.persistent_data[0].id}
+                kwargs={"pk": self.persistent_data[0].guid}
             ),
             data=self.data,
             content_type='application/json',
@@ -135,15 +143,17 @@ class CRUD(TestCase):
         )
         print(response.json())
 
-        #self.__class__.model.refresh_from_db(self.__class__.model)
+        # self.__class__.model.refresh_from_db(self.__class__.model)
         self.assertEqual(response.status_code, 200)
-        #self.assertTrue(self.__class__.model.objects.filter(id=self.data['id']).exists())
+        # self.assertTrue(
+        # self.__class__.model.objects.filter(id=self.data['id']).exists()
+        # )
 
     def test_put_un_authenticated(self):
         response = self.client.put(
             reverse(
                 f"{self.base_url_name}-detail",
-                kwargs={"pk": self.persistent_data[0].id}
+                kwargs={"pk": self.persistent_data[0].guid}
             ),
             data=self.data,
             content_type='application/json'
@@ -160,20 +170,22 @@ class CRUD(TestCase):
         response = self.client.delete(
             reverse(
                 f"{self.base_url_name}-detail",
-                kwargs={"pk": self.persistent_data[0].id}
+                kwargs={"pk": self.persistent_data[0].guid}
             ),
             **self.super_login_headers
         )
         print(response)
 
-        our_id = self.persistent_data[0].id
-        self.assertFalse(self.__class__.model.objects.filter(id=our_id).exists())
+        our_id = self.persistent_data[0].guid
+        self.assertFalse(
+            self.__class__.model.objects.filter(guid=our_id).exists()
+        )
 
     def test_delete_un_authenticated(self):
         response = self.client.delete(
             reverse(
                 f"{self.base_url_name}-detail",
-                kwargs={"pk": self.persistent_data[0].id}
+                kwargs={"pk": self.persistent_data[0].guid}
             )
         )
         print(response)
