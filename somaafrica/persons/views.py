@@ -184,13 +184,13 @@ class UserViewSet(ModelViewSet):
     ordering = 'created_at'
 
     perms_map = {
-        'GET': ['add_user'],
+        'GET': [],
         'OPTIONS': [],
         'HEAD': [],
         'POST': [],
-        'PUT': ['modify_other_user'],
+        'PUT': [],
         'PATCH': [],
-        'DELETE': ['delete_other_user'],
+        'DELETE': [],
     }
 
     def get_queryset(self):
@@ -253,24 +253,21 @@ class PermissionViewSet(ReadOnlyModelViewSet):
         'content_type__id': ['exact'],
         'group__name': ['exact'],
         'id': ['exact'],
-        'name': ['exact'],
-        'user__guid': ['exact']
+        'name': ['exact']
     }
     search_fields = [
         'codename',
         'content_type__id',
         'group__name',
         'id',
-        'name',
-        'user__guid'
+        'name'
     ]
     ordering_fields = [
         'codename',
         'content_type__id',
         'group__name',
         'id',
-        'name',
-        'user__guid'
+        'name'
     ]
     ordering = 'content_type'
 
@@ -278,7 +275,7 @@ class PermissionViewSet(ReadOnlyModelViewSet):
 class GroupViewSet(ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = [IsAuthenticated]
+    # permission_classes = []
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -295,7 +292,7 @@ class GroupViewSet(ModelViewSet):
     ordering = 'name'
 
     perms_map = {
-        'GET': ['add_group'],
+        'GET': [],
         'OPTIONS': [],
         'HEAD': [],
         'POST': [],
@@ -304,17 +301,8 @@ class GroupViewSet(ModelViewSet):
         'DELETE': [],
     }
 
-    def _handle_group_permissions(self, group, perms):
-        try:
-            permissions = Permission.objects.filter(codename__in=perms)
-            group.permissions.clear()
-            group.permissions.add(*permissions)
-            group.save()
-        except Exception as e:
-            raise e
-
-    @action(methods="post", detail=True)
-    def update_permission(self, request, pk):
+    @action(methods=["patch"], detail=True)
+    def add_permissions(self, request, pk):
         perms = request.data.get("permissions")
 
         if not perms:
@@ -325,7 +313,7 @@ class GroupViewSet(ModelViewSet):
 
         try:
             our_group = get_object_or_404(self.get_queryset(), pk=pk)
-            self._handle_group_permissions(our_group, perms)
+            our_group.add_permissions_to_group(perms)
 
             our_group.refresh_from_db()
             our_data = self.get_serializer(our_group).data
@@ -339,16 +327,7 @@ class GroupViewSet(ModelViewSet):
 
     @action(methods=["post"], detail=True)
     def add_user(self, request, pk=None):
-        user = request.user
-        user_guid = request.data.get("user_id")
-
-        if not user.has_perm("add_user_to_group"):
-            detail = "You don't have permissions to add user to group"
-            LOGGER.warning(detail)
-            return Response(
-                data={"message": "Unsuccessful", "detail": detail},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        user_guid = request.data.get("user_guid")
 
         try:
             our_group = get_object_or_404(self.get_queryset(), pk=pk)

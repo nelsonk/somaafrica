@@ -21,6 +21,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class GroupSerializer(serializers.ModelSerializer):
     group_members = UserSerializer(many=True, read_only=True)
+    permissions = serializers.ReadOnlyField(source="group_permissions")
 
     class Meta:
         model = Group

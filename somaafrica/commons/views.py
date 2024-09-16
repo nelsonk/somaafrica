@@ -23,10 +23,8 @@ class CustomDjangoModelPermissions(object):
         return view.perms_map[method]
 
     def has_permission(self, request, view):
-        authenticated_users_only = self.authenticated_users_only
-        if not request.user or (
-            not request.user.is_authenticated and authenticated_users_only
-        ):
+        # pdb.set_trace()
+        if not request.user or not request.user.is_authenticated:
             return False
 
         # Workaround to ensure DjangoModelPermissions are not applied
@@ -40,3 +38,6 @@ class CustomDjangoModelPermissions(object):
             return True
 
         return request.user.has_perms(perms)
+
+    def has_object_permission(self, request, view, obj):
+        return self.has_permission(request, view)

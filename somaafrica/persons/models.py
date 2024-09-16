@@ -1,14 +1,17 @@
-import uuid
 import logging
+import uuid
+
+from collections.abc import Iterable
 
 from django.conf import settings
 from django.contrib.auth.models import (
     BaseUserManager,
     AbstractBaseUser,
-    PermissionsMixin,
-    Group as AuthGroup
+    Permission,
 )
+
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from somaafrica.commons.phone_validator import validate_phone_number
 
@@ -50,6 +53,74 @@ class UserTimeStampModel(TimeStampModel, UserTrackerModel):
         abstract = True
 
 
+class GroupManager(models.Manager):
+    """
+    The manager for the auth's Group model.
+    """
+
+    use_in_migrations = True
+
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
+
+
+class Group(models.Model):
+    guid = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+    name = models.CharField(_("name"), max_length=150, unique=True)
+    permissions = models.ManyToManyField(
+        Permission,
+        verbose_name=_("permissions"),
+        related_name="group_permissions",
+        blank=True,
+    )
+
+    objects = GroupManager()
+
+    class Meta:
+        verbose_name = "Custom Group"
+        verbose_name_plural = "Custom Groups"
+
+    @property
+    def group_members(self):
+        return self.user_set.all()
+
+    @property
+    def group_permissions(self):
+        qs = self.permissions.all()
+        return list(
+            # set(
+            #     [str(perm[0]) for perm in qs.values_list("codename")]
+            # )
+            set(qs.values_list("codename", flat=True))  # optimized
+        )
+
+    def __str__(self):
+        return self.name
+
+    def natural_key(self):
+        return (self.name,)
+
+    def add_user_to_group(self, user_guid):
+        try:
+            group_user = User.objects.get(guid=user_guid)
+            group_user.groups.add(self)
+        except Exception as e:
+            LOGGER.warning(str(e))
+            raise
+
+    def add_permissions_to_group(self, perms: list):
+        try:
+            permissions = Permission.objects.filter(codename__in=perms)
+            self.permissions.add(*permissions)
+            self.save()
+        except Exception as e:
+            raise e
+
+
 class CustomUserManager(BaseUserManager):
     """
     Customer user manager for our custom user
@@ -73,7 +144,7 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(username, email, password, **extras)
 
 
-class User(AbstractBaseUser, PermissionsMixin, TimeStampModel):
+class User(AbstractBaseUser, TimeStampModel):
     """
     Our custom user model
     """
@@ -87,6 +158,17 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampModel):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
+    groups = models.ManyToManyField(
+        Group,
+        verbose_name=_("groups"),
+        blank=True,
+        help_text=_(
+            "The groups this user belongs to. A user will get all permissions "
+            "granted to each of their groups."
+        ),
+        related_name="user_set",
+        related_query_name="user",
+    )
 
     objects = CustomUserManager()
 
@@ -105,34 +187,33 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampModel):
     def __str__(self):
         return f"{self.guid} - {self.username} - {self.email}"
 
+    @property
+    def user_permissions(self):
+        user_groups = self.groups.all()
+        perms = []
+
+        for group in user_groups:
+            perms += group.group_permissions
+
+        return perms
+
     def change_password(self, password):
         self.set_password(password)
         self.save()
         return self
 
+    def has_perm(self, perm, obj=None):
+        # Active superusers have all permissions.
+        if self.is_active and self.is_superuser:
+            return True
 
-class Group(UserTimeStampModel, AuthGroup):
-    guid = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False
-    )
+        # Otherwise we need to check the backends.
+        return perm in self.user_permissions
 
-    class Meta:
-        verbose_name = "Custom Group"
-        verbose_name_plural = "Custom Groups"
-
-    def add_user_to_group(self, user_guid):
-        try:
-            group_user = User.objects.get(guid=user_guid)
-            group_user.groups.add(self)
-        except Exception as e:
-            LOGGER.warning(str(e))
-            raise
-
-    @property
-    def group_members(self):
-        return self.user_set.all()
+    def has_perms(self, perm_list, obj=None):
+        if not isinstance(perm_list, Iterable) or isinstance(perm_list, str):
+            raise ValueError("perm_list must be an iterable of permissions.")
+        return all(self.has_perm(perm, obj) for perm in perm_list)
 
 
 class Phone(UserTimeStampModel):
