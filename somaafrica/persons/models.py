@@ -64,7 +64,7 @@ class GroupManager(models.Manager):
         return self.get(name=name)
 
 
-class Group(models.Model):
+class Group(UserTimeStampModel):
     guid = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -112,13 +112,29 @@ class Group(models.Model):
             LOGGER.warning(str(e))
             raise
 
+    def remove_user_from_group(self, user_guid):
+        try:
+            group_user = User.objects.get(guid=user_guid)
+            group_user.groups.remove(self)
+        except Exception as e:
+            LOGGER.warning(str(e))
+            raise
+
     def add_permissions_to_group(self, perms: list):
         try:
             permissions = Permission.objects.filter(codename__in=perms)
             self.permissions.add(*permissions)
             self.save()
         except Exception as e:
-            raise e
+            raise
+
+    def remove_permissions_from_group(self, perms: list):
+        try:
+            permissions = Permission.objects.filter(codename__in=perms)
+            self.permissions.remove(*permissions)
+            self.save()
+        except Exception as e:
+            raise
 
 
 class CustomUserManager(BaseUserManager):
@@ -197,6 +213,12 @@ class User(AbstractBaseUser, TimeStampModel):
 
         return perms
 
+    @property
+    def user_groups(self):
+        user_groups = self.groups.all()
+
+        return [group.name for group in user_groups]
+
     def change_password(self, password):
         self.set_password(password)
         self.save()
@@ -255,7 +277,9 @@ class Person(UserTimeStampModel):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="person"
+        related_name="person",
+        null=True,
+        blank=True
     )
     first_name = models.CharField(max_length=30, null=True)
     last_name = models.CharField(max_length=30, null=True)
@@ -271,3 +295,54 @@ class Person(UserTimeStampModel):
             ("delete_other_person", "Can delete other person"),
             ("delete_own_person", "Can delete own person record")
         ]
+        constraints = [
+            models.UniqueConstraint(fields=['first_name', 'last_name', 'date_of_birth'], name='unique_person')
+        ]
+
+    def add_user(self, user: str):
+        try:
+            self.user = User.objects.get(guid=user)
+            self.save()
+        except Exception as e:
+            LOGGER.exception(str(e))
+            raise
+
+    def remove_user(self):
+        try:
+            self.user = None
+            self.save()
+        except Exception as e:
+            LOGGER.exception(str(e))
+            raise
+
+    def add_phone(self, phone_data):
+        try:
+            phone, _ = Phone.objects.get_or_create(**phone_data)
+            self.phone.add(phone)
+        except Exception as e:
+            LOGGER.exception(str(e))
+            raise
+
+    def remove_phone(self, phone_data):
+        try:
+            phone = Phone.objects.get(**phone_data)
+            self.phone.remove(phone)
+        except Exception as e:
+            LOGGER.exception(str(e))
+            raise
+
+    def add_address(self, address_data):
+        try:
+            address, _ = Address.objects.get_or_create(**address_data)
+            self.address.add(address)
+        except Exception as e:
+            LOGGER.exception(str(e))
+            raise
+
+    def remove_address(self, address_data):
+        try:
+            address, _ = Address.objects.get_or_create(**address_data)
+            self.address.remove(address)
+        except Exception as e:
+            LOGGER.exception(str(e))
+            raise

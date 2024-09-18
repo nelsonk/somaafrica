@@ -13,6 +13,7 @@ class PermissionSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     # password = serializers.CharField(write_only=True)  # passwd not returned
+    groups = serializers.ReadOnlyField(source="user_groups")
 
     class Meta:
         model = User
@@ -22,6 +23,8 @@ class UserSerializer(serializers.ModelSerializer):
 class GroupSerializer(serializers.ModelSerializer):
     group_members = UserSerializer(many=True, read_only=True)
     permissions = serializers.ReadOnlyField(source="group_permissions")
+    created_by = serializers.UUIDField(required=True)
+    updated_by = serializers.UUIDField(required=True)
 
     class Meta:
         model = Group
@@ -50,7 +53,31 @@ class UserLoginSerializer(serializers.Serializer):
     password = serializers.CharField(required=True)
 
 
+class LogoutJWTAPIViewSerializer(serializers.Serializer):
+    refresh = serializers.CharField(required=True)
+
+class ChangePasswordSerializer(serializers.Serializer):
+    password1 = serializers.CharField(required=True)
+    password2 = serializers.CharField(required=True)
+
+    def validate(self, data):
+        if data["password1"] != data["password2"]:
+            raise serializers.ValidationError("Password mismatch")
+
+        return data
+
+
+class AddRemovePermissionsSerializer(serializers.Serializer):
+    permissions = serializers.ListField(required=True)
+
+
+class AddRemoveUserSerializer(serializers.Serializer):
+    user_guid = serializers.CharField(required=True)
+
+
 class AddressSerializer(serializers.ModelSerializer):
+    created_by = serializers.UUIDField(required=True)
+    updated_by = serializers.UUIDField(required=True)
 
     class Meta:
         model = Address
@@ -58,16 +85,23 @@ class AddressSerializer(serializers.ModelSerializer):
 
 
 class PhoneSerializer(serializers.ModelSerializer):
+    created_by = serializers.UUIDField(required=True)
+    updated_by = serializers.UUIDField(required=True)
 
     class Meta:
         model = Phone
         fields = '__all__'
 
 
+class RemovePhoneSerializer(serializers.Serializer):
+    number = serializers.CharField(required=True)
+
 class PersonSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
-    phone = PhoneSerializer(required=False)
-    address = AddressSerializer(required=False)
+    user = UserSerializer(required=False)
+    phone = PhoneSerializer(required=False, many=True)
+    address = AddressSerializer(required=False, many=True)
+    created_by = serializers.UUIDField(required=True)
+    updated_by = serializers.UUIDField(required=True)
 
     class Meta:
         model = Person

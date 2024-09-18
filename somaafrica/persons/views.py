@@ -19,14 +19,21 @@ from social_core.backends.facebook import FacebookOAuth2
 from social_core.exceptions import AuthException
 from social_core.actions import do_complete
 
-from .models import User, Group, Person
+from .models import User, Group, Person, Phone, Address
 from .serializers import (
     UserSerializer,
     UserSignupSerializer,
     UserLoginSerializer,
+    LogoutJWTAPIViewSerializer,
+    ChangePasswordSerializer,
     GroupSerializer,
     PermissionSerializer,
-    PersonSerializer
+    PersonSerializer,
+    AddRemovePermissionsSerializer,
+    AddRemoveUserSerializer,
+    PhoneSerializer,
+    RemovePhoneSerializer,
+    AddressSerializer
 )
 
 
@@ -50,7 +57,7 @@ class SignupAPIView(APIView):
             return Response(
                 {
                     "message": "User created Successfully",
-                    "user": user_serializer.data
+                    "detail": user_serializer.data
                 },
                 status=status.HTTP_200_OK
             )
@@ -58,8 +65,11 @@ class SignupAPIView(APIView):
         except Exception as e:
             LOGGER.warning(str(e))
             return Response(
-                {"message": str(e)},
-                status=status.HTTP_406_NOT_ACCEPTABLE
+                {
+                    "message": "Signup failed",
+                    "detail": str(e)
+                },
+                status=status.HTTP_400_BAD_REQUEST
             )
 
 
@@ -101,7 +111,7 @@ class SocialLoginAPIView(APIView):
             else:
                 LOGGER.warning("Unsupported backend")
                 return Response(
-                    {'error': 'Unsupported backend'},
+                    {'message': 'Failed', 'detail': 'Unsupported backend'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -133,7 +143,7 @@ class SocialLoginAPIView(APIView):
         except AuthException as e:
             LOGGER.warning(str(e))
             return Response(
-                {'error': str(e)},
+                {'message': 'Failed', 'detail': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -142,9 +152,12 @@ class LogoutJWTAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        logout_serializer = LogoutJWTAPIViewSerializer(data=request.data)
+        logout_serializer.is_valid(raise_exception=True)
+
         try:
             # Get the refresh token from the request data
-            refresh_token = request.data["refresh"]
+            refresh_token = logout_serializer.validated_data["refresh"]
             # Create a RefreshToken object from the token string
             token = RefreshToken(refresh_token)
             # Blacklist the refresh token
@@ -159,7 +172,7 @@ class LogoutJWTAPIView(APIView):
             LOGGER.warning(str(e))
             # Handle any errors (e.g., invalid token)
             return Response(
-                {"detail": f"Failed, {str(e)}"},
+                {"message": "Failed", "detail": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -176,54 +189,57 @@ class UserViewSet(ModelViewSet):
         'username': ['exact'],
         'email': ['exact'],
         "guid": ['exact'],
+        "groups__name": ['exact'],
         'is_active': ['exact'],
         'is_superuser': ['exact']
     }
-    search_fields = ['username', 'email', 'guid', 'created_at', 'updated_at']
-    ordering_fields = ['username', 'email', 'guid', 'created_at', 'updated_at']
+    search_fields = [
+        'username',
+        'email',
+        'guid',
+        'groups__name',
+        'created_at',
+        'updated_at'
+    ]
+    ordering_fields = [
+        'username',
+        'email',
+        'guid',
+        'groups__name',
+        'created_at',
+        'updated_at'
+    ]
     ordering = 'created_at'
 
     perms_map = {
         'GET': [],
         'OPTIONS': [],
         'HEAD': [],
-        'POST': [],
-        'PUT': [],
-        'PATCH': [],
-        'DELETE': [],
+        'POST': ['add_user'],
+        'PUT': ['change_user'],
+        'PATCH': ['change_user'],
+        'DELETE': ['delete_user'],
     }
 
     def get_queryset(self):
-        user_id = self.request.user.guid
+        user_guid = self.request.user.guid
         admin_user = self.request.user.is_superuser
 
-        if admin_user or self.request.user.has_perm("add_user"):
+        if admin_user or self.request.user.has_perm("modify_other_user"):
             return User.objects.all()
 
-        return User.objects.filter(guid=user_id)
+        return User.objects.filter(guid=user_guid)
 
-    @action(methods=['put'], detail=True)
+    @action(methods=['patch'], detail=True)
     def change_password(self, request, pk=None):
-        password1 = request.data.get("password1")
-        password2 = request.data.get("password2")
-
-        if not password1 or not password2:
-            LOGGER.warning("Password numm")
-            return Response(
-                {"message": "Password null"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if password1 != password2:
-            LOGGER.warning("Password mismatch")
-            return Response(
-                {"message": "Password mismatch"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        password_serializer = ChangePasswordSerializer(data=request.data)
+        password_serializer.is_valid(raise_exception=True)
 
         try:
             user = get_object_or_404(self.get_queryset(), pk=pk)
-            user.change_password(password=password1)
+            user.change_password(
+                password=password_serializer.validated_data["password1"]
+            )
             detail = (self.get_serializer(user)).data
 
             return Response(
@@ -275,7 +291,6 @@ class PermissionViewSet(ReadOnlyModelViewSet):
 class GroupViewSet(ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    # permission_classes = []
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -283,41 +298,55 @@ class GroupViewSet(ModelViewSet):
     ]
     filterset_fields = {
         'guid': ['exact'],
+        'created_at': ['exact'],
+        'created_by': ['exact'],
+        'updated_at': ['exact'],
+        'updated_by': ['exact'],
         'name': ['exact'],
         'permissions__codename': ['exact'],
         'user__guid': ['exact']
     }
     search_fields = ['guid', 'name', 'permissions__codename', 'user__guid']
-    ordering_fields = ['guid', 'name', 'permissions__codename', 'user__guid']
+    ordering_fields = [
+        'guid',
+        'created_at',
+        'created_by',
+        'updated_at',
+        'updated_by',
+        'name',
+        'permissions__codename',
+        'user__guid'
+    ]
     ordering = 'name'
 
     perms_map = {
         'GET': [],
         'OPTIONS': [],
         'HEAD': [],
-        'POST': [],
-        'PUT': [],
-        'PATCH': [],
-        'DELETE': [],
+        'POST': ['add_group'],
+        'PUT': ['add_group'],
+        'PATCH': ['change_group'],
+        'DELETE': ['delete_group'],
     }
 
     @action(methods=["patch"], detail=True)
-    def add_permissions(self, request, pk):
-        perms = request.data.get("permissions")
-
-        if not perms:
-            return Response(
-                data={"message": "List of permission codenames not provided"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+    def add_permissions(self, request, pk=None):
+        perms_serializer = AddRemovePermissionsSerializer(data=request.data)
+        perms_serializer.is_valid(raise_exception=True)
 
         try:
             our_group = get_object_or_404(self.get_queryset(), pk=pk)
-            our_group.add_permissions_to_group(perms)
+            our_group.add_permissions_to_group(
+                perms_serializer.validated_data["permissions"]
+                )
 
             our_group.refresh_from_db()
             our_data = self.get_serializer(our_group).data
-            return Response(data=our_data, status=status.HTTP_200_OK)
+
+            return Response(
+                data={"message": "Successful", "detail": our_data},
+                status=status.HTTP_200_OK
+            )
 
         except Exception as e:
             return Response(
@@ -325,19 +354,22 @@ class GroupViewSet(ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    @action(methods=["post"], detail=True)
-    def add_user(self, request, pk=None):
-        user_guid = request.data.get("user_guid")
+    @action(methods=['patch'], detail=True)
+    def remove_permissions(self, request, pk=None):
+        perms_serializer = AddRemovePermissionsSerializer(data=request.data)
+        perms_serializer.is_valid(raise_exception=True)
 
         try:
-            our_group = get_object_or_404(self.get_queryset(), pk=pk)
-            our_group.add_user_to_group(user_guid)
+            our_group = get_object_or_404(self.get_queryset(),pk=pk)
+            our_group.remove_permissions_from_group(
+                perms_serializer.validated_data["permissions"]
+            )
 
             our_group.refresh_from_db()
             our_data = self.get_serializer(our_group).data
 
             return Response(
-                data=our_data,
+                data={"message": "Successful", "detail": our_data},
                 status=status.HTTP_200_OK
             )
 
@@ -348,27 +380,48 @@ class GroupViewSet(ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    @action(methods=["post"], detail=True)
-    def remove_user(self, request, pk=None):
-        user = request.user
-        user_id = request.data.get("user_id")
-
-        if not user.is_superuser and not user.has_perm("remove_user_group"):
-            detail = "You don't have permissions to add user"
-            LOGGER.warning(detail)
-            return Response(
-                data={"message": "Unsuccessful", "detail": detail},
-                status=status.HTTP_403_FORBIDDEN
-            )
+    @action(methods=["patch"], detail=True)
+    def add_user(self, request, pk=None):
+        user_serializer = AddRemoveUserSerializer(data=request.data)
+        user_serializer.is_valid(raise_exception=True)
 
         try:
             our_group = get_object_or_404(self.get_queryset(), pk=pk)
-            group_user = get_object_or_404(User, guid=user_id)
-            group_user.groups.remove(our_group)
+            our_group.add_user_to_group(
+                user_serializer.validated_data["user_guid"]
+            )
 
-            detail = f" User {group_user} removed from group {our_group.name}"
+            our_group.refresh_from_db()
+            our_data = self.get_serializer(our_group).data
+
             return Response(
-                data={"message": "Successful", "detail": detail},
+                data={"message": "Successful", "detail": our_data},
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            LOGGER.warning(str(e))
+            return Response(
+                data={"message": "Unsuccessful", "detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(methods=["patch"], detail=True)
+    def remove_user(self, request, pk=None):
+        user_serializer = AddRemoveUserSerializer(data=request.data)
+        user_serializer.is_valid()
+
+        try:
+            our_group = get_object_or_404(self.get_queryset(), pk=pk)
+            our_group.remove_user_from_group(
+                user_serializer.validated_data["user_guid"]
+            )
+
+            our_group.refresh_from_db()
+            our_data = self.get_serializer(our_group).data
+
+            return Response(
+                data={"message": "Successful", "detail": our_data},
                 status=status.HTTP_200_OK
             )
 
@@ -383,7 +436,6 @@ class GroupViewSet(ModelViewSet):
 class PersonViewSet(ModelViewSet):
     queryset = Person.objects.all()
     serializer_class = PersonSerializer
-    permission_classes = [IsAuthenticated]
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -391,20 +443,199 @@ class PersonViewSet(ModelViewSet):
     ]
     filterset_fields = {
         'guid': ['exact'],
-        'name': ['exact'],
-        'permissions__codename': ['exact'],
-        'user__guid': ['exact']
+        'created_at': ['exact'],
+        'created_by': ['exact'],
+        'updated_at': ['exact'],
+        'updated_by': ['exact'],
+        'first_name': ['exact'],
+        'last_name': ['exact'],
+        'gender': ['exact'],
+        'date_of_birth': ['exact'],
+        'phone': ['exact'],
+        'address': ['exact'],
+        'account_status': ['exact'],
+        'user__guid': ['exact'],
     }
-    search_fields = ['guid', 'name', 'permissions__codename', 'user__guid']
-    ordering_fields = ['guid', 'name', 'permissions__codename', 'user__guid']
-    ordering = 'name'
+    search_fields = [
+        'guid',
+        'first_name',
+        'last_name',
+        'gender',
+        'date_of_birth',
+        'phone',
+        'address',
+        'account_status',
+        'user__guid'
+    ]
+    ordering_fields = [
+        'guid',
+        'created_at',
+        'created_by',
+        'updated_at',
+        'updated_by',
+        'first_name',
+        'last_name',
+        'gender',
+        'date_of_birth',
+        'phone',
+        'address',
+        'account_status',
+        'user__guid'
+    ]
+    ordering = 'created_at'
 
     perms_map = {
-        'GET': ['add_group'],
+        'GET': [],
         'OPTIONS': [],
         'HEAD': [],
-        'POST': [],
-        'PUT': [],
-        'PATCH': [],
-        'DELETE': [],
+        'POST': ['add_person'],
+        'PUT': ['change_person'],
+        'PATCH': ['change_person'],
+        'DELETE': ['delete_person'],
     }
+
+    @action(methods=['patch'], detail=True)
+    def add_user(self, request, pk=None):
+        user_serializer = AddRemoveUserSerializer(data=request.data)
+        user_serializer.is_valid(raise_exception=True)
+
+        try:
+            person = get_object_or_404(self.get_queryset(), pk=pk)
+
+            person.add_user(user=user_serializer.validated_data["user_guid"])
+
+            person.refresh_from_db()
+            person_data = self.get_serializer(person).data
+
+            return Response(
+                data={"message": "Successful", "detail": person_data},
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            LOGGER.exception(str(e))
+            return Response(
+                data={"message": "Unsuccessful", "detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(methods=['patch'], detail=True)
+    def remove_user(self, request, pk=None):
+        try:
+            person = get_object_or_404(self.get_queryset(), pk=pk)
+            person.remove_user()
+
+            person.refresh_from_db()
+            person_data = self.get_serializer(person).data
+
+            return Response(
+                data={"message": "Successful", "detail": person_data},
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            LOGGER.exception(str(e))
+            return Response(
+                data={"message": "Unsuccessful", "detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(methods=['patch'], detail=True)
+    def add_phone(self, request, pk=None):
+        phone_serializer = PhoneSerializer(data=request.data)
+        phone_serializer.is_valid(raise_exception=True)
+
+        try:
+            person = get_object_or_404(self.get_queryset(), pk=pk)
+            person.add_phone(phone_serializer.validated_data)
+
+            person.refresh_from_db()
+            person_data = self.get_serializer(person).data
+
+            return Response(
+                data={"message": "Successful", "detail": person_data},
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            LOGGER.exception(str(e))
+
+            return Response(
+                data={"message": "Unsuccessful", "detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(methods=['patch'], detail=True)
+    def remove_phone(self, request, pk=None):
+        phone_serializer = RemovePhoneSerializer(data=request.data)
+        phone_serializer.is_valid(raise_exception=True)
+
+        try:
+            person = get_object_or_404(self.get_queryset(), pk=pk)
+            person.remove_phone(phone_serializer.validated_data)
+
+            person.refresh_from_db()
+            person_data = self.get_serializer(person).data
+
+            return Response(
+                data={"message": "Successful", "detail": person_data},
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            LOGGER.exception(str(e))
+
+            return Response(
+                data={"message": "Unsuccessful", "detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(methods=['patch'], detail=True)
+    def add_address(self, request, pk=None):
+        address_serializer = AddressSerializer(data=request.data)
+        address_serializer.is_valid(raise_exception=True)
+
+        try:
+            person = get_object_or_404(self.get_queryset(), pk=pk)
+            person.add_address(address_serializer.validated_data)
+
+            person.refresh_from_db()
+            person_data = self.get_serializer(person).data
+
+            return Response(
+                data={"message": "Successful", "detail": person_data},
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            LOGGER.exception(str(e))
+
+            return Response(
+                data={"message": "Unsuccessful", "detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(methods=['patch'], detail=True)
+    def remove_address(self, request, pk=None):
+        address_serializer = AddressSerializer(data=request.data)
+        address_serializer.is_valid(raise_exception=True)
+
+        try:
+            person = get_object_or_404(self.get_queryset(), pk=pk)
+            person.remove_address(address_serializer.validated_data)
+
+            person.refresh_from_db()
+            person_data = self.get_serializer(person).data
+
+            return Response(
+                data={"message": "Successful", "detail": person_data},
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            LOGGER.exception(str(e))
+
+            return Response(
+                data={"message": "Unsuccessful", "detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
