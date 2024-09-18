@@ -218,6 +218,11 @@ LOGGING = {
             "level": "INFO",
             "propagate": False
         },
+        'django.db.backends': {
+        'handlers': ['console'],
+        'level': 'ERROR',  # Change this to 'DEBUG' to log SQL queries in development
+        'propagate': False,
+        },
     },
 }
 logging.config.dictConfig(LOGGING)

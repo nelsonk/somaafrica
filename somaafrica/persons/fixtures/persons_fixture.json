@@ -1,0 +1,94 @@
+[
+{
+    "model": "persons.group",
+    "pk": "d5f9bef3-5896-4f47-a11a-08564a5006e4",
+    "fields": {
+        "created_at": "2024-09-18T20:08:41.013Z",
+        "updated_at": "2024-09-18T20:14:36.579Z",
+        "created_by": "c91d4da4-8c86-4ffc-8904-39e28ef1d027",
+        "updated_by": "c91d4da4-8c86-4ffc-8904-39e28ef1d027",
+        "name": "Teacher",
+        "permissions": [
+            9,
+            53
+        ]
+    }
+},
+{
+    "model": "persons.user",
+    "pk": "aa21651f-ecda-4392-b311-f571b796e93c",
+    "fields": {
+        "password": "pbkdf2_sha256$600000$vICOwunB7en7vyvTGwpe9i$fREJEfYaneA11VGYe3/+NUSdTJn+JiM+/j0yE6M06BM=",
+        "last_login": null,
+        "created_at": "2024-09-18T18:45:34.283Z",
+        "updated_at": "2024-09-18T18:45:34.283Z",
+        "username": "testuser",
+        "email": null,
+        "is_active": true,
+        "is_staff": false,
+        "is_superuser": false,
+        "groups": []
+    }
+},
+{
+    "model": "persons.user",
+    "pk": "c91d4da4-8c86-4ffc-8904-39e28ef1d027",
+    "fields": {
+        "password": "pbkdf2_sha256$600000$M2P9XIE27SL7awJtEbGCPQ$C4PlEwPf8TxZ6nQpOhmUKbaAZnOTpEwxMtSuc5Ayg8s=",
+        "last_login": null,
+        "created_at": "2024-09-18T18:38:55.357Z",
+        "updated_at": "2024-09-18T18:38:55.358Z",
+        "username": "nelson",
+        "email": null,
+        "is_active": true,
+        "is_staff": true,
+        "is_superuser": true,
+        "groups": []
+    }
+},
+{
+    "model": "persons.user",
+    "pk": "cdbf95ee-00c4-43cd-a1eb-03e393382906",
+    "fields": {
+        "password": "pbkdf2_sha256$600000$2AL13MQy5Ae3p6NRaLFPGr$b5V/KDV944Y4Q8pBOy4Y3WesRLXAHzoaentnrkkQ6t0=",
+        "last_login": null,
+        "created_at": "2024-09-18T18:43:03.897Z",
+        "updated_at": "2024-09-18T18:44:25.265Z",
+        "username": "testsuperuser",
+        "email": null,
+        "is_active": true,
+        "is_staff": true,
+        "is_superuser": true,
+        "groups": []
+    }
+},
+{
+    "model": "persons.phone",
+    "pk": "866a292d-8c0c-4209-9a4f-1d9d41a30571",
+    "fields": {
+        "created_at": "2024-09-18T21:18:45.854Z",
+        "updated_at": "2024-09-18T21:18:45.854Z",
+        "created_by": "c91d4da4-8c86-4ffc-8904-39e28ef1d027",
+        "updated_by": "c91d4da4-8c86-4ffc-8904-39e28ef1d027",
+        "number": "+256779564427"
+    }
+},
+{
+    "model": "persons.person",
+    "pk": "c7988253-49da-4b16-bd8d-df3b40a76afe",
+    "fields": {
+        "created_at": "2024-09-18T20:57:55.879Z",
+        "updated_at": "2024-09-18T21:14:40.784Z",
+        "created_by": "c91d4da4-8c86-4ffc-8904-39e28ef1d027",
+        "updated_by": "c91d4da4-8c86-4ffc-8904-39e28ef1d027",
+        "user": null,
+        "first_name": "Nelson",
+        "last_name": "Kanyali",
+        "gender": "M",
+        "date_of_birth": "2024-09-01",
+        "account_status": "Incomplete",
+        "phone": [],
+        "address": []
+    }
+}
+]
