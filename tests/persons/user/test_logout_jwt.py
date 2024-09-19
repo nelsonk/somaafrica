@@ -53,7 +53,7 @@ class TestLogoutJWT(TestCase):
 
     def test_with_wrong_refresh_token(self):
         token = {
-            "refrsh": "hgahjahkjkashiakwykuwiuwbbjcbbcbkuscblcsihwuhcbubcbnaj"
+            "refresh": "hgahjahkjkashiakwykuwiuwbbjcbbcbkuscblcsihwuhcbubcbnaj"
         }
 
         response = self.client.post(
@@ -98,7 +98,7 @@ class TestLogoutJWT(TestCase):
 
         self.assertContains(
             response,
-            "Failed",
+            "field is required",
             status_code=400
         )
 
@@ -116,7 +116,7 @@ class TestLogoutJWT(TestCase):
 
         self.assertContains(
             response,
-            "Failed",
+            "field may not be blank",
             status_code=400
         )
 

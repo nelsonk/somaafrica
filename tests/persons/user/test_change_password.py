@@ -63,7 +63,7 @@ class TestListUsers(TestCase):
         }
 
     def test_change_own_password(self):
-        response = self.client.put(
+        response = self.client.patch(
             reverse(
                 "user-change-password",
                 kwargs={"pk": self.normal_user.guid}
@@ -88,7 +88,7 @@ class TestListUsers(TestCase):
         self.assertTrue(authenticated_user.username == "testuser")
 
     def test_change_other_user_password_as_superuser(self):
-        response = self.client.put(
+        response = self.client.patch(
             reverse(
                 "user-change-password",
                 kwargs={"pk": self.normal_user.guid}
@@ -113,7 +113,7 @@ class TestListUsers(TestCase):
         self.assertTrue(authenticated_user.username == "testuser")
 
     def test_other_user_details_with_normaluser_token(self):
-        response = self.client.put(
+        response = self.client.patch(
             reverse(
                 "user-change-password",
                 kwargs={"pk": self.super_user.guid}
@@ -128,7 +128,7 @@ class TestListUsers(TestCase):
         self.assertTrue("No User matches" in response.json()["detail"])
 
     def test_with_no_token(self):
-        response = self.client.put(
+        response = self.client.patch(
             reverse(
                 "user-change-password",
                 kwargs={"pk": self.normal_user.guid}
@@ -148,7 +148,7 @@ class TestListUsers(TestCase):
             "HTTP_AUTHORIZATION": f"Bearer {access_token}"
         }
 
-        response = self.client.put(
+        response = self.client.patch(
             reverse(
                 "user-change-password",
                 kwargs={"pk": self.normal_user.guid}
@@ -163,7 +163,7 @@ class TestListUsers(TestCase):
         self.assertTrue("token not valid" in response.json()["detail"])
 
     def test_password_missing(self):
-        response = self.client.put(
+        response = self.client.patch(
             reverse(
                 "user-change-password",
                 kwargs={"pk": self.normal_user.guid}
@@ -173,8 +173,7 @@ class TestListUsers(TestCase):
         )
         print(response.json())
 
-        self.assertEqual(response.status_code, 400)
-        self.assertTrue("Password null" in response.json()["message"])
+        self.assertContains(response, "field is required", status_code=400)
 
     def test_password_mismatch(self):
         data = {
@@ -182,7 +181,7 @@ class TestListUsers(TestCase):
             "password2": "pass"
         }
 
-        response = self.client.put(
+        response = self.client.patch(
             reverse(
                 "user-change-password",
                 kwargs={"pk": self.normal_user.guid}
@@ -193,5 +192,4 @@ class TestListUsers(TestCase):
         )
         print(response.json())
 
-        self.assertEqual(response.status_code, 400)
-        self.assertTrue("Password mismatch" in response.json()["message"])
+        self.assertContains(response, "Password mismatch", status_code=400)
