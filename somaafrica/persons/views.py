@@ -19,7 +19,7 @@ from social_core.backends.facebook import FacebookOAuth2
 from social_core.exceptions import AuthException
 from social_core.actions import do_complete
 
-from .models import User, Group, Person, Phone, Address
+from .models import User, Group, Person
 from .serializers import (
     UserSerializer,
     UserSignupSerializer,
@@ -360,7 +360,7 @@ class GroupViewSet(ModelViewSet):
         perms_serializer.is_valid(raise_exception=True)
 
         try:
-            our_group = get_object_or_404(self.get_queryset(),pk=pk)
+            our_group = get_object_or_404(self.get_queryset(), pk=pk)
             our_group.remove_permissions_from_group(
                 perms_serializer.validated_data["permissions"]
             )

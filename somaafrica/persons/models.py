@@ -126,6 +126,7 @@ class Group(UserTimeStampModel):
             self.permissions.add(*permissions)
             self.save()
         except Exception as e:
+            LOGGER.exception(str(e))
             raise
 
     def remove_permissions_from_group(self, perms: list):
@@ -134,6 +135,7 @@ class Group(UserTimeStampModel):
             self.permissions.remove(*permissions)
             self.save()
         except Exception as e:
+            LOGGER.exception(str(e))
             raise
 
 
@@ -234,6 +236,7 @@ class User(AbstractBaseUser, TimeStampModel):
 
     def has_perms(self, perm_list, obj=None):
         if not isinstance(perm_list, Iterable) or isinstance(perm_list, str):
+            LOGGER.error("perm_list must be an iterable of permissions.")
             raise ValueError("perm_list must be an iterable of permissions.")
         return all(self.has_perm(perm, obj) for perm in perm_list)
 
@@ -296,7 +299,10 @@ class Person(UserTimeStampModel):
             ("delete_own_person", "Can delete own person record")
         ]
         constraints = [
-            models.UniqueConstraint(fields=['first_name', 'last_name', 'date_of_birth'], name='unique_person')
+            models.UniqueConstraint(
+                fields=['first_name', 'last_name', 'date_of_birth'],
+                name='unique_person'
+            )
         ]
 
     def add_user(self, user: str):

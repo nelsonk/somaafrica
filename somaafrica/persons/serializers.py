@@ -56,6 +56,7 @@ class UserLoginSerializer(serializers.Serializer):
 class LogoutJWTAPIViewSerializer(serializers.Serializer):
     refresh = serializers.CharField(required=True)
 
+
 class ChangePasswordSerializer(serializers.Serializer):
     password1 = serializers.CharField(required=True)
     password2 = serializers.CharField(required=True)
@@ -95,6 +96,7 @@ class PhoneSerializer(serializers.ModelSerializer):
 
 class RemovePhoneSerializer(serializers.Serializer):
     number = serializers.CharField(required=True)
+
 
 class PersonSerializer(serializers.ModelSerializer):
     user = UserSerializer(required=False)

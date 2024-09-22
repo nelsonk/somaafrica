@@ -51,7 +51,7 @@ class TestSignup(TestCase):
         self.assertContains(
             response,
             "Username or Email required",
-            status_code=406
+            status_code=400
         )
 
     def test_signup_with_wrong_email_format(self):
@@ -66,7 +66,7 @@ class TestSignup(TestCase):
         self.assertContains(
             response,
             "Enter a valid email address",
-            status_code=406
+            status_code=400
         )
 
     def test_signup_with_one_password(self):
@@ -81,7 +81,7 @@ class TestSignup(TestCase):
         self.assertContains(
             response,
             "This field is required",
-            status_code=406
+            status_code=400
         )
 
     def test_signup_mismatched_passwords(self):
@@ -97,7 +97,7 @@ class TestSignup(TestCase):
         self.assertContains(
             response,
             "Password mismatch",
-            status_code=406
+            status_code=400
         )
 
     def test_signup_with_no_data(self):
@@ -107,7 +107,7 @@ class TestSignup(TestCase):
         self.assertContains(
             response,
             "This field is required",
-            status_code=406
+            status_code=400
         )
 
     def test_signup_with_empty_data(self):
@@ -123,7 +123,7 @@ class TestSignup(TestCase):
         self.assertContains(
             response,
             "field may not be blank",
-            status_code=406
+            status_code=400
         )
 
     def test_signup_with_more_fields(self):
