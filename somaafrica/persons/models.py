@@ -9,7 +9,6 @@ from django.contrib.auth.models import (
     AbstractBaseUser,
     Permission,
 )
-
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -123,6 +122,10 @@ class Group(UserTimeStampModel):
     def add_permissions_to_group(self, perms: list):
         try:
             permissions = Permission.objects.filter(codename__in=perms)
+
+            if not permissions.exists():
+                raise ValueError("No valid permissions found")
+
             self.permissions.add(*permissions)
             self.save()
         except Exception as e:
@@ -132,6 +135,10 @@ class Group(UserTimeStampModel):
     def remove_permissions_from_group(self, perms: list):
         try:
             permissions = Permission.objects.filter(codename__in=perms)
+
+            if not permissions.exists():
+                raise ValueError("No valid permissions found")
+
             self.permissions.remove(*permissions)
             self.save()
         except Exception as e:
@@ -314,12 +321,8 @@ class Person(UserTimeStampModel):
             raise
 
     def remove_user(self):
-        try:
-            self.user = None
-            self.save()
-        except Exception as e:
-            LOGGER.exception(str(e))
-            raise
+        self.user = None
+        self.save()
 
     def add_phone(self, phone_data):
         try:
@@ -347,7 +350,7 @@ class Person(UserTimeStampModel):
 
     def remove_address(self, address_data):
         try:
-            address, _ = Address.objects.get_or_create(**address_data)
+            address = Address.objects.get(**address_data)
             self.address.remove(address)
         except Exception as e:
             LOGGER.exception(str(e))

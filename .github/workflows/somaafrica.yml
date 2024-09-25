@@ -49,4 +49,5 @@ jobs:
         python manage.py showmigrations
     - name: Run Tests
       run: |
-        py.test
+        coverage erase
+        py.test --cov=somaafrica --cov-report=html --cov-fail-under=100 tests/

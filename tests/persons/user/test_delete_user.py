@@ -1,6 +1,5 @@
 from django.test import TestCase
 from django.urls import reverse, exceptions
-
 from model_bakery import baker
 
 
