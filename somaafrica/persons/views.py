@@ -3,21 +3,21 @@ import logging
 
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import Permission
-from django.db.models import Q
+# from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, filters
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
-from social_core.backends.google import GoogleOAuth2
-from social_core.backends.facebook import FacebookOAuth2
-from social_core.exceptions import AuthException
-from social_core.actions import do_complete
+# from social_core.backends.google import GoogleOAuth2
+# from social_core.backends.facebook import FacebookOAuth2
+# from social_core.exceptions import AuthException
+# from social_core.actions import do_complete
 
 from .models import User, Group, Person
 from .serializers import (
@@ -98,58 +98,58 @@ class LoginAPIView(APIView):
             )
 
 
-class SocialLoginAPIView(APIView):
-    permission_classes = [AllowAny]
+# class SocialLoginAPIView(APIView):
+#     permission_classes = [AllowAny]
 
-    def post(self, request, backend):
-        try:
-            # Get the backend (e.g., Google, Facebook)
-            if backend == 'google':
-                backend_class = GoogleOAuth2()
-            elif backend == 'facebook':
-                backend_class = FacebookOAuth2()
-            else:
-                LOGGER.warning("Unsupported backend")
-                return Response(
-                    {'message': 'Failed', 'detail': 'Unsupported backend'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+#     def post(self, request, backend):
+#         try:
+#             # Get the backend (e.g., Google, Facebook)
+#             if backend == 'google':
+#                 backend_class = GoogleOAuth2()
+#             elif backend == 'facebook':
+#                 backend_class = FacebookOAuth2()
+#             else:
+#                 LOGGER.warning("Unsupported backend")
+#                 return Response(
+#                     {'message': 'Failed', 'detail': 'Unsupported backend'},
+#                     status=status.HTTP_400_BAD_REQUEST
+#                 )
 
-            # Authenticate user via social backend
-            user = do_complete(
-                backend_class,
-                request,
-                request.data.get('access_token')
-            )
+#             # Authenticate user via social backend
+#             user = do_complete(
+#                 backend_class,
+#                 request,
+#                 request.data.get('access_token')
+#             )
 
-            if user and not User.objects.filter(
-                Q(email=user.email) | Q(username=user.username)
-            ).exists():
-                # Create a new user if necessary
-                user = User.objects.create_user(
-                    username=user.username,
-                    email=user.email
-                )
-                user.set_unusable_password()
-                user.save()
+#             if user and not User.objects.filter(
+#                 Q(email=user.email) | Q(username=user.username)
+#             ).exists():
+#                 # Create a new user if necessary
+#                 user = User.objects.create_user(
+#                     username=user.username,
+#                     email=user.email
+#                 )
+#                 user.set_unusable_password()
+#                 user.save()
 
-            # Generate JWT tokens
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            })
+#             # Generate JWT tokens
+#             refresh = RefreshToken.for_user(user)
+#             return Response({
+#                 'refresh': str(refresh),
+#                 'access': str(refresh.access_token),
+#             })
 
-        except AuthException as e:
-            LOGGER.warning(str(e))
-            return Response(
-                {'message': 'Failed', 'detail': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+#         except AuthException as e:
+#             LOGGER.warning(str(e))
+#             return Response(
+#                 {'message': 'Failed', 'detail': str(e)},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
 
 
 class LogoutJWTAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    _ignore_model_permissions = True
 
     def post(self, request):
         logout_serializer = LogoutJWTAPIViewSerializer(data=request.data)
@@ -179,7 +179,6 @@ class LogoutJWTAPIView(APIView):
 
 class UserViewSet(ModelViewSet):
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -213,12 +212,10 @@ class UserViewSet(ModelViewSet):
 
     perms_map = {
         'GET': [],
-        'OPTIONS': [],
-        'HEAD': [],
-        'POST': ['add_user'],
-        'PUT': ['change_user'],
-        'PATCH': ['change_user'],
-        'DELETE': ['delete_user'],
+        'POST': [],
+        'PUT': [],
+        'PATCH': [],
+        'DELETE': [],
     }
 
     def get_queryset(self):
@@ -258,7 +255,6 @@ class UserViewSet(ModelViewSet):
 class PermissionViewSet(ReadOnlyModelViewSet):
     queryset = Permission.objects.all()
     serializer_class = PermissionSerializer
-    permission_classes = [IsAuthenticated]
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -324,7 +320,7 @@ class GroupViewSet(ModelViewSet):
         'OPTIONS': [],
         'HEAD': [],
         'POST': ['add_group'],
-        'PUT': ['add_group'],
+        'PUT': ['change_group'],
         'PATCH': ['change_group'],
         'DELETE': ['delete_group'],
     }

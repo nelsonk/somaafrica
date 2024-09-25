@@ -1,14 +1,13 @@
+import abc
+
 from django.test import TestCase
 from django.urls import reverse
-
 from model_bakery import baker
 
-from somaafrica.persons.models import User
 
-
-class CRUD(TestCase):
-    model = User
-    base_url_name = 'user'
+class CRUD(TestCase, metaclass=abc.ABCMeta):
+    model = None
+    base_url_name = ''
 
     @classmethod
     def setUpTestData(cls):
@@ -40,40 +39,13 @@ class CRUD(TestCase):
             "password": "2user"
         }
 
+    @abc.abstractmethod
     def setUp(self):
-        class_name = self.__class__.__name__
-        class_model = self.__class__.model
-        print(f"Running setUp in {class_name}, model: {class_model}")
-
-        self.data = baker.prepare(self.__class__.model).__dict__
-        self.data.pop('_state', None)
-        self.data.pop('guid', None)
-
-        self.persistent_data = baker.make(
-            self.__class__.model,
-            _quantity=5,
-            make_m2m=True
-        )
-
-        self.tokens = self.client.post(
-            '/token',
-            data=self.logins,
-            content_type='application/json'
-        )
-        self.access_token = self.tokens.json()["access"]
-        self.login_headers = {
-            "HTTP_AUTHORIZATION": f"Bearer {self.access_token}"
-        }
-
-        self.super_tokens = self.client.post(
-            '/token',
-            data=self.super_logins,
-            content_type='application/json'
-        )
-        self.super_access_token = self.super_tokens.json()["access"]
-        self.super_login_headers = {
-            "HTTP_AUTHORIZATION": f"Bearer {self.super_access_token}"
-        }
+        """This method should be defined in the child class"""
+        if self.model is None:
+            raise NotImplementedError(
+                "Subclasses must define 'model' and related attributes."
+            )
 
     def test_get_with_super_user(self):
         response = self.client.get(
@@ -143,11 +115,7 @@ class CRUD(TestCase):
         )
         print(response.json())
 
-        # self.__class__.model.refresh_from_db(self.__class__.model)
         self.assertEqual(response.status_code, 200)
-        # self.assertTrue(
-        # self.__class__.model.objects.filter(id=self.data['id']).exists()
-        # )
 
     def test_put_un_authenticated(self):
         response = self.client.put(

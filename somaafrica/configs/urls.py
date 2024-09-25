@@ -25,7 +25,6 @@ from rest_framework_simplejwt.views import (
 from somaafrica.persons.views import (
     SignupAPIView,
     LoginAPIView,
-    SocialLoginAPIView,
     LogoutJWTAPIView
 )
 
@@ -34,11 +33,11 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("signup", SignupAPIView.as_view(), name="signup"),
     path("login", LoginAPIView.as_view(), name="login"),
-    path(
-        "social/<str:backend>/",
-        SocialLoginAPIView.as_view(),
-        name="social-login"
-    ),
+    # path(
+    #     "social/<str:backend>/",
+    #     SocialLoginAPIView.as_view(),
+    #     name="social-login"
+    # ),
     path("token", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh", TokenRefreshView.as_view(), name="token_refresh"),
     path("logout", LogoutJWTAPIView.as_view(), name="logout-token"),
