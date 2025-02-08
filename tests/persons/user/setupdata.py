@@ -38,6 +38,9 @@ class SetUpData(TestCase, metaclass=abc.ABCMeta):
             "password": "2user"
         }
 
+        assert cls.normal_user is not None, "Normal user was not created."
+        assert cls.super_user is not None, "Superuser was not created."
+
     def setUp(self):
         """This method should be customized in the child class"""
         if self.model is None:

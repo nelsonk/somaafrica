@@ -12,7 +12,7 @@ from django.contrib.auth.models import (
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from somaafrica.commons.phone_validator import validate_phone_number
+from somaafrica.commons.validator import validate_phone_number
 
 
 LOGGER = logging.getLogger(__name__)

@@ -4,3 +4,4 @@ pytest-django
 flake8
 pytest-cov
 model-bakery
+django-cors-headers

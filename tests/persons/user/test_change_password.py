@@ -32,24 +32,25 @@ class TestListUsers(TestCase):
             "password2": "password"
         }
 
-    def setUp(self):
-        logins = {
+        cls.logins = {
             "username": "testuser@tests.com",
             "password": "testuser"
         }
-        super_logins = {
+
+        cls.super_logins = {
             "username": "2user",
             "password": "2user"
         }
 
+    def setUp(self):
         tokens = self.client.post(
             '/token',
-            data=logins,
+            data=self.logins,
             content_type='application/json'
         )
         super_tokens = self.client.post(
             '/token',
-            data=super_logins,
+            data=self.super_logins,
             content_type='application/json'
         )
         access_token = tokens.json()["access"]
@@ -62,6 +63,10 @@ class TestListUsers(TestCase):
         }
 
     def test_change_own_password(self):
+        self.data.update(self.logins)
+        print("Current Logins: ", self.logins)
+        print("New logins with current", self.data)
+
         response = self.client.patch(
             reverse(
                 "user-change-password",
@@ -87,6 +92,8 @@ class TestListUsers(TestCase):
         self.assertTrue(authenticated_user.username == "testuser")
 
     def test_change_other_user_password_as_superuser(self):
+        self.data.update(self.logins)
+
         response = self.client.patch(
             reverse(
                 "user-change-password",
@@ -112,6 +119,8 @@ class TestListUsers(TestCase):
         self.assertTrue(authenticated_user.username == "testuser")
 
     def test_other_user_details_with_normaluser_token(self):
+        self.data.update(self.super_logins)
+
         response = self.client.patch(
             reverse(
                 "user-change-password",
@@ -176,6 +185,8 @@ class TestListUsers(TestCase):
 
     def test_password_mismatch(self):
         data = {
+            "username": "2user",
+            "password": "2user",
             "password1": "password",
             "password2": "pass"
         }

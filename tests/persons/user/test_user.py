@@ -26,6 +26,10 @@ class UserTests(CRUD):
             data=self.logins,
             content_type='application/json'
         )
+
+        print("Logins", self.logins)
+        print("Response", self.tokens.json()["access"])
+
         self.access_token = self.tokens.json()["access"]
         self.login_headers = {
             "HTTP_AUTHORIZATION": f"Bearer {self.access_token}"
@@ -36,6 +40,10 @@ class UserTests(CRUD):
             data=self.super_logins,
             content_type='application/json'
         )
+
+        print("Logins", self.super_logins)
+        print("Response", self.super_tokens.json()["access"])
+
         self.super_access_token = self.super_tokens.json()["access"]
         self.super_login_headers = {
             "HTTP_AUTHORIZATION": f"Bearer {self.super_access_token}"

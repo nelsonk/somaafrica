@@ -30,9 +30,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "corsheaders",
     "rest_framework",
     "django_filters",
-    'rest_framework_simplejwt.token_blacklist',
+    "rest_framework_simplejwt.token_blacklist",
     "somaafrica.commons",
     "somaafrica.persons",
 ]
@@ -45,6 +46,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
 ]
 
 ROOT_URLCONF = "somaafrica.configs.urls"
@@ -177,6 +179,18 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
     "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION"
 }
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:4200",
+]
+
+FRONTEND_URL = "http://localhost:4200"
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.mailgun.org'  # Example: smtp.gmail.com
+EMAIL_PORT = 587
+EMAIL_USE_TLS = False
+EMAIL_HOST_USER = 'postmaster@sandboxd13634e9efb74711ab2cfa3667d0c057.mailgun.org'
+EMAIL_HOST_PASSWORD = 'e395f6bac1745bb102ede65307b1655e-667818f5-43c35f69'
 
 LOGGING_CONFIG = None
 LOGGING = {

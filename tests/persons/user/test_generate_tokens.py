@@ -2,9 +2,6 @@ from django.test import TestCase
 from django.urls import reverse
 from model_bakery import baker
 
-from somaafrica.commons.authentication_backends import AuthenticationError
-from somaafrica.persons.models import User
-
 
 class TestGenerateTokens(TestCase):
     @classmethod
@@ -35,9 +32,14 @@ class TestGenerateTokens(TestCase):
             "password": "testuser123"
         }
 
-        with self.assertRaises(User.DoesNotExist):
-            response = self.client.post(reverse("token_obtain_pair"), data)
-            print(response.json())
+        response = self.client.post(reverse("token_obtain_pair"), data)
+        print(response.json())
+
+        self.assertContains(
+            response,
+            "No User matches the given query",
+            status_code=400
+        )
 
     def test_with_wrong_password(self):
         data = {
@@ -45,9 +47,10 @@ class TestGenerateTokens(TestCase):
             "password": "testuser1"
         }
 
-        with self.assertRaises(AuthenticationError):
-            response = self.client.post(reverse("token_obtain_pair"), data)
-            print(response.json())
+        response = self.client.post(reverse("token_obtain_pair"), data)
+        print(response.json())
+
+        self.assertContains(response, "Invalid password", status_code=400)
 
     def test_with_no_password(self):
         data = {

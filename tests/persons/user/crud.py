@@ -39,6 +39,9 @@ class CRUD(TestCase, metaclass=abc.ABCMeta):
             "password": "2user"
         }
 
+        assert cls.normal_user is not None, "Normal user was not created."
+        assert cls.super_user is not None, "Superuser was not created."
+
     @abc.abstractmethod
     def setUp(self):
         """This method should be defined in the child class"""

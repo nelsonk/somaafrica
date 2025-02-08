@@ -58,6 +58,8 @@ class LogoutJWTAPIViewSerializer(serializers.Serializer):
 
 
 class ChangePasswordSerializer(serializers.Serializer):
+    username = serializers.CharField(required=True)
+    password = serializers.CharField(required=True)
     password1 = serializers.CharField(required=True)
     password2 = serializers.CharField(required=True)
 
@@ -66,6 +68,21 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError("Password mismatch")
 
         return data
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    password1 = serializers.CharField(required=True)
+    password2 = serializers.CharField(required=True)
+
+    def validate(self, data):
+        if data["password1"] != data["password2"]:
+            raise serializers.ValidationError("Password mismatch")
+
+        return data
+
+
+class RequestPasswordResetSerializer(serializers.Serializer):
+    email = serializers.CharField(required=True)
 
 
 class AddRemovePermissionsSerializer(serializers.Serializer):
@@ -95,7 +112,11 @@ class PhoneSerializer(serializers.ModelSerializer):
 
 
 class RemovePhoneSerializer(serializers.Serializer):
-    number = serializers.CharField(required=True)
+    guid = serializers.CharField(required=True)
+
+
+class RemoveAddressSerializer(serializers.Serializer):
+    guid = serializers.CharField(required=True)
 
 
 class PersonSerializer(serializers.ModelSerializer):
