@@ -1,9 +1,9 @@
 from django.urls import reverse
 
-from rest_framework import status
 from model_bakery import baker
+from rest_framework import status
 
-from somaafrica.persons.models import Person
+from somaafrica.persons.models import Person, User
 from tests.persons.user.crud import CRUD
 
 
@@ -12,15 +12,23 @@ class PersonTests(CRUD):
     base_url_name = 'person'
 
     def setUp(self):
-        self.data = baker.prepare(self.model).__dict__
+        self.user = baker.make(User)
+        self.users = baker.make(User, _quantity=5)
+
+        self.data = baker.prepare(self.model, user=self.user).__dict__
+
         self.data.pop('_state', None)
         self.data.pop('guid', None)
 
-        self.persistent_data = baker.make(
-            self.model,
-            _quantity=5,
-            make_m2m=True
-        )
+        self.persistent_data = [
+            baker.make
+            (
+                self.model,
+                user=user,
+                make_m2m=True
+            )
+            for user in self.users
+        ]
 
         self.tokens = self.client.post(
             '/token',
@@ -58,15 +66,15 @@ class PersonTests(CRUD):
         fake_pk = "hjssjjsksnskjkbbkskjshkjkjsjhksjk"
         self.test_cases = [
             (self.login_headers, real_pk, status.HTTP_403_FORBIDDEN),
-            (self.super_login_headers, real_pk, status.HTTP_200_OK),
-            (self.super_login_headers, fake_pk, status.HTTP_400_BAD_REQUEST)
+            (self.super_login_headers, fake_pk, status.HTTP_400_BAD_REQUEST),
+            (self.super_login_headers, real_pk, status.HTTP_200_OK)
         ]
 
     def test_add_user(self):
         data = {"user_guid": self.normal_user.guid}
 
         for headers, pk, expected in self.test_cases:
-            with self.subTest(headers=headers, pk=pk):
+            with self.subTest(headers=headers, pk=pk, expected=expected):
                 response = self.client.patch(
                     reverse(
                         "person-add-user",
@@ -93,7 +101,7 @@ class PersonTests(CRUD):
         data = {"user_guid": self.normal_user.guid}
 
         for headers, pk, expected in self.test_cases:
-            with self.subTest(headers=headers, pk=pk):
+            with self.subTest(headers=headers, pk=pk, expected=expected):
                 response = self.client.patch(
                     reverse(
                         "person-remove-user",
@@ -153,6 +161,9 @@ class PersonTests(CRUD):
                         status_code=200
                     )
 
+                    result = response.json()
+                    self.phone_guid = result["detail"]["phone"][0]["guid"]
+
     def test_invalid_phone_number(self):
         testcases = [
             ("770127391", "is not a valid phone number format"),
@@ -195,7 +206,7 @@ class PersonTests(CRUD):
                         "person-remove-phone",
                         kwargs={"pk": pk}
                     ),
-                    data=self.phone_data,
+                    data={"guid": self.phone_guid},
                     content_type="application/json",
                     **headers
                 )
@@ -205,7 +216,7 @@ class PersonTests(CRUD):
 
                 if expected == status.HTTP_200_OK:
                     self.assertNotIn(
-                        self.phone_data["number"],
+                        self.phone_guid,
                         response.json()
                     )
 
@@ -232,6 +243,9 @@ class PersonTests(CRUD):
                         status_code=200
                     )
 
+                    result = response.json()
+                    self.address_guid = result["detail"]["address"][0]["guid"]
+
     def test_remove_address(self):
         self.test_add_address()
 
@@ -242,7 +256,7 @@ class PersonTests(CRUD):
                         "person-remove-address",
                         kwargs={"pk": pk}
                     ),
-                    data=self.address_data,
+                    data={"guid": self.address_guid},
                     content_type="application/json",
                     **headers
                 )
@@ -252,12 +266,12 @@ class PersonTests(CRUD):
 
                 if expected == status.HTTP_200_OK:
                     self.assertNotIn(
-                        self.address_data["address"],
+                        self.address_guid,
                         response.json()
                     )
 
     def test_remove_fake_phone(self):
-        data = {"number": "7892928998"}
+        data = {"guid": self.persistent_data[4].guid}
 
         response = self.client.patch(
             reverse(
@@ -274,9 +288,7 @@ class PersonTests(CRUD):
 
     def test_remove_fake_address(self):
         data = {
-            "address": "7892928998",
-            "created_by": self.normal_user.guid,
-            "updated_by": self.normal_user.guid
+            "guid": self.persistent_data[4].guid
             }
 
         response = self.client.patch(

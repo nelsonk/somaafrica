@@ -1,6 +1,9 @@
+from django.contrib.auth import authenticate
 from django.test import TestCase
 from django.urls import reverse
 from model_bakery import baker
+
+from somaafrica.persons.models import User
 
 
 class TestLogin(TestCase):
@@ -52,7 +55,20 @@ class TestLogin(TestCase):
 
         response = self.client.post(reverse("login"), credentials)
 
-        self.assertContains(response, "does not exist", status_code=400)
+        self.assertContains(
+            response,
+            "No User matches the given query",
+            status_code=400
+        )
+
+    def test_authentication_DoesNotExist(self):
+        credentials = {
+            "username": "test",
+            "password": "test"
+        }
+
+        with self.assertRaises(User.DoesNotExist):
+            authenticate(request=None, **credentials)
 
     def test_username_missing(self):
         credentials = {

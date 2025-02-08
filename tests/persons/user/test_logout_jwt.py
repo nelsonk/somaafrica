@@ -38,7 +38,7 @@ class TestLogoutJWT(TestCase):
 
     def test_with_right_access_refresh_token(self):
         response = self.client.post(
-            reverse("logout-token"),
+            reverse("logout_token"),
             self.token_data,
             **self.login_headers
         )
@@ -56,7 +56,7 @@ class TestLogoutJWT(TestCase):
         }
 
         response = self.client.post(
-            reverse("logout-token"),
+            reverse("logout_token"),
             token,
             **self.login_headers
         )
@@ -70,13 +70,13 @@ class TestLogoutJWT(TestCase):
 
     def test_with_expired_refresh_token(self):
         self.client.post(
-            reverse('logout-token'),
+            reverse('logout_token'),
             self.token_data,
             **self.login_headers
         )
 
         response = self.client.post(
-            reverse("logout-token"),
+            reverse("logout_token"),
             self.token_data,
             **self.login_headers
         )
@@ -90,7 +90,7 @@ class TestLogoutJWT(TestCase):
 
     def test_with_no_refresh_token(self):
         response = self.client.post(
-            reverse("logout-token"),
+            reverse("logout_token"),
             **self.login_headers
         )
         print(response.json())
@@ -107,7 +107,7 @@ class TestLogoutJWT(TestCase):
         }
 
         response = self.client.post(
-            reverse("logout-token"),
+            reverse("logout_token"),
             data,
             **self.login_headers
         )
@@ -120,7 +120,7 @@ class TestLogoutJWT(TestCase):
         )
 
     def test_with_no_access_token(self):
-        response = self.client.post(reverse("logout-token"), self.token_data)
+        response = self.client.post(reverse("logout_token"), self.token_data)
         print(response.json())
 
         self.assertContains(
@@ -135,7 +135,7 @@ class TestLogoutJWT(TestCase):
         }
 
         response = self.client.post(
-            reverse("logout-token"),
+            reverse("logout_token"),
             self.token_data,
             **headers
         )
@@ -153,7 +153,7 @@ class TestLogoutJWT(TestCase):
         }
 
         response = self.client.post(
-            reverse("logout-token"),
+            reverse("logout_token"),
             self.token_data,
             **headers
         )

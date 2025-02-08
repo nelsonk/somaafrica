@@ -61,7 +61,7 @@ class TestRefreshToken(TestCase):
 
     def test_with_expired_refresh_token(self):
         self.client.post(
-            reverse('logout-token'),
+            reverse('logout_token'),
             self.token_data,
             **self.login_headers
         )
